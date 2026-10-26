@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Game Hub</title>
+<style>
+  /* ── 디자인 토큰 ───────────────────────────────
+     색·둥글기·그림자는 여기서만 정한다. 게임 쪽(넥서스 디펜스)과 같은 결을 쓴다. */
+  :root {
+    --bg:          #080b13;
+    --surface:     #111827;
+    --surface-sunk:#0b101c;
+    --line:        rgba(140,170,230,.14);
+    --line-strong: rgba(140,170,230,.28);
+    --text:        #e9eefc;
+    --text-dim:    #9aa8c7;
+    --text-mute:   #6b789a;
+    --brand:       #4b86ff;
+    --brand-deep:  #2f62df;
+    --cyan:        #7fe7ff;
+    --gold:        #ffd45e;
+    --r-md: 12px; --r-lg: 16px;
+    --sh-1: 0 1px 2px rgba(0,0,0,.45);
+    --sh-2: 0 8px 24px rgba(0,0,0,.45);
+    --ring: 0 0 0 2px rgba(75,134,255,.5);
+    --hair: inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+  body {
+    background:
+      radial-gradient(900px 520px at 50% -8%, rgba(79,130,255,.16) 0%, rgba(79,130,255,0) 70%),
+      radial-gradient(700px 500px at 50% 110%, rgba(127,231,255,.08) 0%, rgba(127,231,255,0) 70%),
+      linear-gradient(180deg, #0e1526 0%, #0a0e1a 55%, #080b13 100%);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", "맑은 고딕", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
+    padding: clamp(20px, 5vw, 48px) 16px 40px;
+  }
+  .wrap { width: 100%; max-width: 980px; margin: 0 auto; }
+
+  header { text-align: center; margin-bottom: clamp(26px, 5vw, 42px); }
+  h1 {
+    font-size: clamp(28px, 7vw, 54px); font-weight: 800; letter-spacing: .12em;
+    background: linear-gradient(170deg,#ffffff 0%,#cfe2ff 38%,#5b9dff 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 6px 26px rgba(75,134,255,.35));
+  }
+  header .sub { color: var(--text-mute); font-size: 12.5px; letter-spacing: .34em; margin-top: 8px; }
+
+  /* 게임 카드 — 넓은 화면에서 2열 */
+  /* min() 을 끼워 좁은 화면에서 카드가 화면 밖으로 밀려나지 않게 한다 */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(330px, 100%), 1fr)); gap: 14px; }
+  .card {
+    display: flex; flex-direction: column;
+    background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012)), var(--surface);
+    border: 1px solid var(--line); border-radius: var(--r-lg);
+    box-shadow: var(--hair), var(--sh-1);
+    overflow: hidden; text-decoration: none; color: inherit;
+    transition: border-color .15s, transform .1s, box-shadow .15s;
+  }
+  .card:hover { border-color: var(--line-strong); transform: translateY(-2px); box-shadow: var(--hair), var(--sh-2); }
+  .card:focus-visible { outline: none; box-shadow: var(--ring), var(--sh-2); }
+  .card:active { transform: translateY(0); }
+  .thumb {
+    height: 132px; position: relative; flex-shrink: 0;
+    background: var(--surface-sunk); border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .thumb svg { width: 100%; height: 100%; display: block; }
+  .tag {
+    position: absolute; top: 10px; left: 10px;
+    padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+    background: rgba(8,11,19,.7); border: 1px solid var(--line-strong); color: var(--text-dim);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  .body { padding: 14px 15px 15px; display: flex; flex-direction: column; flex: 1; }
+  .nm { font-size: 17px; font-weight: 800; letter-spacing: .01em; }
+  .ds { font-size: 12.5px; color: var(--text-dim); line-height: 1.55; margin-top: 6px; flex: 1; }
+  .rec {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px;
+    padding-top: 11px; border-top: 1px solid var(--line);
+    min-height: 40px; align-items: center;
+  }
+  .rec .pill {
+    padding: 4px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700;
+    background: rgba(255,255,255,.05); border: 1px solid var(--line); color: var(--text-dim);
+  }
+  .rec .pill b { color: var(--cyan); font-weight: 800; margin-left: 4px; }
+  .rec .pill.g b { color: var(--gold); }
+  .rec .none { font-size: 11.5px; color: var(--text-mute); }
+  .go {
+    margin-top: 13px; display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px; border-radius: 10px; border: 1px solid rgba(120,170,255,.35);
+    background: linear-gradient(180deg, var(--brand), var(--brand-deep));
+    color: #fff; font-size: 13.5px; font-weight: 700;
+    box-shadow: var(--hair), var(--sh-1);
+  }
+  .card:hover .go { background: linear-gradient(180deg, #5c93ff, #3a6fee); }
+
+  footer { margin-top: 26px; text-align: center; }
+  .total {
+    display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px;
+    padding: 12px 18px; border-radius: var(--r-md);
+    background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.012));
+    border: 1px solid var(--line); box-shadow: var(--hair);
+    font-size: 12.5px; color: var(--text-dim);
+  }
+  .total b { color: var(--text); font-weight: 800; margin-left: 5px; }
+  .hint { font-size: 11.5px; color: var(--text-mute); line-height: 1.7; margin-top: 14px; }
+  .hint b { color: var(--text-dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>GAME HUB</h1>
+    <p class="sub">PICK YOUR GAME</p>
+  </header>
+
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    <div class="total" id="total"></div>
+    <p class="hint">
+      기록은 브라우저에 저장되며, 각 게임을 따로 열어 플레이한 기록도 그대로 이어집니다.<br>
+      카드를 누르면 허브 안에서 바로 실행됩니다 — 왼쪽 위 <b>← 허브</b>로 돌아옵니다.
+    </p>
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+/* ── 게임 목록 ───────────────────────────────────────────
+   games/<id>.html 은 각 게임 저장소의 index.html 사본이다 (tools/sync.js 로 갱신).
+   record() 는 그 게임이 localStorage 에 남긴 기록을 읽어 카드에 띄울 조각을 돌려준다.
+   같은 사이트(origin)에 있으므로 게임을 따로 열어 쌓은 기록도 그대로 읽힌다. */
+const GAMES = [
+  {
+    id: 'slime', name: '슬라임 키우기', genre: '방치형', bg: '#0c1a14',
+    desc: '때려서 젤리를 모으고, 먹여서 레벨을 올린다. 레벨이 오르면 젤리가 더 빨리 쌓이는 방치형 성장 게임.',
+    art: `<svg viewBox="0 0 320 132" preserveAspectRatio="xMidYMid meet">
+      <defs><radialGradient id="sg" cx="50%" cy="35%"><stop offset="0" stop-color="#8ef7b5"/><stop offset="1" stop-color="#1f9d55"/></radialGradient></defs>
+      <rect width="320" height="132" fill="#0c1a14"/>
+      <ellipse cx="160" cy="118" rx="74" ry="10" fill="#0a2a1c"/>
+      <path d="M100 112 Q96 56 160 52 Q224 56 220 112 Z" fill="url(#sg)"/>
+      <circle cx="140" cy="86" r="8" fill="#0b1f16"/><circle cx="180" cy="86" r="8" fill="#0b1f16"/>
+      <circle cx="142.5" cy="83" r="2.6" fill="#fff"/><circle cx="182.5" cy="83" r="2.6" fill="#fff"/>
+      <path d="M150 100 Q160 108 170 100" stroke="#0b1f16" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <g fill="#ffd45e"><circle cx="58" cy="44" r="5"/><circle cx="268" cy="62" r="4"/><circle cx="44" cy="90" r="3.4"/><circle cx="276" cy="28" r="3"/></g>
+    </svg>`,
+    record() {
+      const s = read('slime-idle-v1');
+      if (!s) return null;
+      return [p('레벨', s.level || 1), p('스테이지', s.stage || 1), p('영혼', fmt(s.soulsTotal || s.souls || 0), true)];
+    },
+  },
+  {
+    id: 'nexus', name: '넥서스 디펜스', genre: '타워 디펜스', bg: '#10141f',
+    desc: '사방에서 날아오는 적으로부터 중앙 넥서스를 지킨다. 영웅 5직업·전직, 병력 9단계, 영구 강화와 온라인 랭킹.',
+    art: `<svg viewBox="0 0 320 132" preserveAspectRatio="xMidYMid meet">
+      <rect width="320" height="132" fill="#10141f"/>
+      <g stroke="#1b2740" stroke-width="1">
+        <path d="M0 33H320M0 66H320M0 99H320M53 0V132M107 0V132M160 0V132M213 0V132M267 0V132"/>
+      </g>
+      <circle cx="160" cy="66" r="52" fill="none" stroke="#2a3a60" stroke-width="1.5" stroke-dasharray="5 5"/>
+      <path d="M160 36 185 66 160 96 135 66Z" fill="#ffc83d" stroke="#fff3c4" stroke-width="2"/>
+      <circle cx="160" cy="66" r="24" fill="none" stroke="#4de3a2" stroke-width="3"/>
+      <g fill="#ff6b81"><circle cx="58" cy="30" r="6"/><circle cx="262" cy="36" r="6"/><circle cx="70" cy="104" r="6"/><circle cx="252" cy="100" r="6"/></g>
+      <g stroke="#7fe7ff" stroke-width="2.5" stroke-linecap="round"><path d="M176 58 206 44"/><path d="M144 76 112 92"/></g>
+    </svg>`,
+    record() {
+      const s = read('nexusdefense.save');
+      if (!s) return null;
+      return [p('최고 웨이브', s.best || 0, true), p('코어', fmt(s.cores || 0)), p('출격', s.runs || 0)];
+    },
+  },
+  {
+    id: 'money', name: '머니 디펜스', genre: '경로형 TD', bg: '#131a12',
+    desc: '워크3 돈타워를 옮긴 길목 수비. 돈을 버는 건물로 돈을 벌어 타워를 세우고 끝없는 라운드를 버틴다.',
+    art: `<svg viewBox="0 0 320 132" preserveAspectRatio="xMidYMid meet">
+      <rect width="320" height="132" fill="#131a12"/>
+      <path d="M-10 102H92V36H196V96H330" fill="none" stroke="#5a4a2a" stroke-width="18" stroke-linejoin="round"/>
+      <path d="M-10 102H92V36H196V96H330" fill="none" stroke="#8a7340" stroke-width="2" stroke-dasharray="7 9" stroke-linejoin="round"/>
+      <g fill="#ffd45e" stroke="#8a6a12" stroke-width="2">
+        <ellipse cx="60" cy="56" rx="15" ry="6"/><ellipse cx="60" cy="48" rx="15" ry="6"/><ellipse cx="60" cy="40" rx="15" ry="6"/>
+      </g>
+      <g fill="#7fb2ff" stroke="#1f3f7a" stroke-width="2">
+        <rect x="128" y="62" width="30" height="30" rx="5"/><rect x="226" y="30" width="30" height="30" rx="5"/>
+      </g>
+      <g fill="#ff6b81"><circle cx="150" cy="36" r="7"/><circle cx="252" cy="96" r="7"/></g>
+    </svg>`,
+    record() {
+      const s = read('moneydefense.v4');
+      if (!s) return null;
+      const best = Math.max(0, ...Object.values(s.best || {}).map(Number).filter(n => !isNaN(n)));
+      const kills = Object.values(s.kills || {}).reduce((a, b) => a + (+b || 0), 0);
+      if (!best && !s.plays) return null;
+      return [p('최고 라운드', best, true), p('처치', fmt(kills)), p('플레이', s.plays || 0)];
+    },
+  },
+  {
+    id: 'wall', name: '극한 벽짓고 살아남기', genre: '생존 디펜스', bg: '#15121c',
+    desc: '스타2 유즈맵을 옮긴 생존전. 벽으로 길을 막고 사령관 능력과 변이원을 조합해 100웨이브를 버틴다.',
+    art: `<svg viewBox="0 0 320 132" preserveAspectRatio="xMidYMid meet">
+      <rect width="320" height="132" fill="#15121c"/>
+      <g fill="#6b6478" stroke="#2a2535" stroke-width="2">
+        <rect x="104" y="18" width="36" height="20"/><rect x="140" y="18" width="36" height="20"/><rect x="176" y="18" width="36" height="20"/>
+        <rect x="86" y="38" width="36" height="20"/><rect x="122" y="38" width="36" height="20"/><rect x="158" y="38" width="36" height="20"/><rect x="194" y="38" width="36" height="20"/>
+        <rect x="104" y="58" width="36" height="20"/><rect x="140" y="58" width="36" height="20"/><rect x="176" y="58" width="36" height="20"/>
+      </g>
+      <path d="M160 92 180 110 160 128 140 110Z" fill="#7fe7ff" stroke="#d6f6ff" stroke-width="2"/>
+      <g fill="#8ef77a"><circle cx="48" cy="28" r="7"/><circle cx="272" cy="26" r="7"/><circle cx="36" cy="66" r="6"/><circle cx="286" cy="62" r="6"/></g>
+      <g stroke="#ff6b81" stroke-width="2.5" stroke-linecap="round"><path d="M62 34 86 42"/><path d="M258 32 234 42"/></g>
+    </svg>`,
+    record() {
+      const meta = read('wallDefenseMeta'), rec = read('wallDefenseRecords2');
+      const best = rec ? Math.max(0, ...Object.values(rec).map(o => Math.max(+o.best || 0, +o.endless || 0))) : 0;
+      const wins = rec ? Object.values(rec).reduce((a, o) => a + (+o.wins || 0), 0) : 0;
+      if (!meta && !best) return null;
+      return [p('최고 웨이브', best, true), p('승리', wins), p('정수', fmt((meta && meta.essence) || 0))];
+    },
+  },
+];
+
+const $ = id => document.getElementById(id);
+function read(key) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch (e) { return null; }
+}
+function fmt(n) {
+  n = +n || 0;
+  if (n >= 1e8) return (n / 1e8).toFixed(1).replace(/\.0$/, '') + '억';
+  if (n >= 1e4) return (n / 1e4).toFixed(1).replace(/\.0$/, '') + '만';
+  return n.toLocaleString();
+}
+const p = (k, v, gold) => `<span class="pill${gold ? ' g' : ''}">${k}<b>${v}</b></span>`;
+
+$('grid').innerHTML = GAMES.map(g => {
+  let rec = null;
+  try { rec = g.record(); } catch (e) {}
+  return `<a class="card" href="play.html?game=${g.id}">
+    <div class="thumb" style="background:${g.bg}">${g.art}<span class="tag">${g.genre}</span></div>
+    <div class="body">
+      <div class="nm">${g.name}</div>
+      <p class="ds">${g.desc}</p>
+      <div class="rec">${rec && rec.length ? rec.join('') : '<span class="none">아직 기록이 없습니다 — 첫 판을 시작해 보세요</span>'}</div>
+      <div class="go">▶ 플레이</div>
+    </div>
+  </a>`;
+}).join('');
+
+// 아래 통합 기록 — 기록이 남은 게임만 센다
+const played = GAMES.filter(g => { try { return !!g.record(); } catch (e) { return false; } }).length;
+const nx = read('nexusdefense.save') || {}, md = read('moneydefense.v4') || {};
+const wallRec = read('wallDefenseRecords2') || {}, wallMeta = read('wallDefenseMeta') || {};
+const runs = (+nx.runs || 0) + (+md.plays || 0) + (+((wallMeta.stats || {}).runs) || 0);
+const bestWave = Math.max(+nx.best || 0, 0, ...Object.values(wallRec).map(o => +o.best || 0));
+$('total').innerHTML =
+  `<span>플레이한 게임<b>${played} / ${GAMES.length}</b></span>` +
+  `<span>총 출격 횟수<b>${fmt(runs)}</b></span>` +
+  `<span>최고 웨이브<b>${fmt(bestWave)}</b></span>`;
+</script>
+</body>
+</html>
