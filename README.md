@@ -85,3 +85,16 @@ python -m http.server
 - 카드 썸네일은 인라인 SVG로 그려서 이미지 파일이 없습니다.
 - `play.html`은 띄운 뒤 iframe에 초점을 줘서 Space·단축키가 바로 게임으로 갑니다.
 - 게임 안에서 뒤로가기를 누르면 그 게임의 메뉴로, 메뉴에서 한 번 더 누르면 허브로 돌아옵니다.
+
+## 만드는 사람들 (HS엔지니어링 게임제작본부)
+
+이 허브와 게임 4개는 AI 직원 팀이 함께 만든다. 일하는 규칙은 [CLAUDE.md](CLAUDE.md).
+
+| 팀 | 직원 | 결과물 |
+|---|---|---|
+| 프로그래밍팀 (구현) | `gamehub-dev-hub`, `gamehub-dev-gameplay` | 허브·게임 코드 |
+| QA팀 (검증) | `gamehub-qa-functional`, `gamehub-qa-compat` | [QA/](QA/README.md) |
+| 시나리오팀 | `gamehub-scenario-writer`, `gamehub-scenario-director` | [시나리오/](시나리오/README.md) |
+| 아트팀 (시각화) | `gamehub-artist-style`, `gamehub-artist-visual` | [아트/](아트/README.md) |
+
+기획은 기획경영부 `game-planner`가 `기획/`에 쓴다. 직원은 로컬 커밋까지만 하고, GitHub 푸시는 사람이 확인한 뒤 한다.
