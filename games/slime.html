@@ -566,6 +566,55 @@
   /* 장착 중인 무기는 누를 일이 없어 비활성이지만, 흐려지면 오히려 눈에 안 띈다 */
   .w.equipped:disabled { opacity: 1; }
 
+  /* ---- 스킬 바 ---- */
+  .skillrow { display: flex; gap: 8px; margin-top: 12px; }
+  .skill {
+    flex: 1; width: auto; position: relative; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 8px 6px; text-align: center;
+  }
+  .skill .sk-ico { font-size: 18px; line-height: 1; }
+  .skill .sk-name { font-size: 12px; font-weight: 700; }
+  .skill .sk-sub { font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .skill.ready { border-color: var(--accent-dim); background: #1f2a25; }
+  .skill.ready .sk-name { color: var(--accent); }
+  .skill.on { border-color: var(--gold); background: #2a2413; }
+  .skill.on .sk-name { color: var(--gold); }
+  /* 쿨다운은 버튼 아래쪽을 채우는 띠로 보여 준다 — 숫자보다 먼저 눈에 들어온다 */
+  .skill .cdfill {
+    position: absolute; left: 0; bottom: 0; height: 3px;
+    background: var(--accent); transition: width 120ms linear;
+  }
+
+  /* ---- 업적 ---- */
+  .achlist { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+  .ach {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 11px; border-radius: 10px;
+    border: 1px solid var(--line); background: #1b1f2b;
+  }
+  .ach.done { border-color: var(--accent-dim); background: #1f2a25; }
+  .ach .a-ico { font-size: 16px; flex: none; opacity: .4; }
+  .ach.done .a-ico { opacity: 1; }
+  .ach .a-main { flex: 1; display: flex; flex-direction: column; gap: 2px; text-align: left; }
+  .ach .a-name { font-size: 13px; font-weight: 700; }
+  .ach.done .a-name { color: var(--accent); }
+  .ach .a-desc { font-size: 11px; color: var(--muted); }
+  .ach .a-rew { font-size: 11px; font-weight: 700; color: var(--gold); white-space: nowrap; }
+
+  /* ---- 보스 층 ---- */
+  .floor.boss { color: #ffbdbd; border-color: #a34848; background: #2a1414; }
+  .ename.boss { color: #ffbdbd; }
+
+  /* 자동 먹이 토글 — 먹이 버튼 옆에 작게 */
+  .feedrow { display: flex; gap: 8px; align-items: stretch; margin-top: 14px; }
+  .feedrow .feed { margin-top: 0; flex: 1; }
+  .autofeed {
+    width: auto; flex: none; padding: 9px 12px;
+    font-size: 12px; font-weight: 700; white-space: nowrap;
+  }
+  .autofeed.on { border-color: var(--accent); background: var(--accent-dim); color: #eafff4; }
+
   /* 환생은 모달 밖, 상점 버튼들과 같은 줄에 둔다 */
   .rebirth {
     width: auto;
@@ -624,7 +673,8 @@
 
     <div class="shoprow">
       <button class="shoplink" id="upbtn" aria-label="강화 열기">🔧 강화</button>
-      <button class="shoplink" id="shopbtn" aria-label="무기상점 열기">⚔️ 무기상점</button>
+      <button class="shoplink" id="shopbtn" aria-label="장비상점 열기">⚔️ 장비</button>
+      <button class="shoplink" id="achbtn" aria-label="업적 열기">🏆 업적</button>
       <button class="rebirth" id="rebirth">환생</button>
     </div>
 
@@ -674,7 +724,11 @@
     <div class="barrow"><span>경험치</span><span id="s-exp">0 / 50</span></div>
     <div class="bar"><i id="s-expbar"></i></div>
 
-    <button class="feed" id="feed">먹이 주기 — 젤리를 전부 경험치로</button>
+    <div class="feedrow">
+      <button class="feed" id="feed">먹이 주기 — 젤리를 전부 경험치로</button>
+      <button class="autofeed" id="autofeed" title="1초마다 자동으로 먹입니다">자동 ✕</button>
+    </div>
+    <div class="skillrow" id="skillrow"></div>
     <p class="note" id="note"></p>
   </main>
 
@@ -720,12 +774,29 @@
 <div class="modal" id="wshop" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="wshop-title">
     <div class="sheethead">
-      <h2 id="wshop-title">⚔️ 무기상점</h2>
+      <h2 id="wshop-title">⚔️ 장비상점</h2>
       <button class="iconbtn" id="wshop-close" aria-label="닫기">✕</button>
     </div>
+    <div class="tabs" id="geartabs" role="tablist">
+      <button data-gear="weapon" class="on">무기</button>
+      <button data-gear="armor">방어구</button>
+      <button data-gear="trinket">장신구</button>
+    </div>
     <div class="wlist" id="wlist"></div>
-    <p class="note">무기는 하나만 장착됩니다. 이미 산 무기를 누르면 그것으로 바꿔 낍니다.<br>
-      <b>무기는 환생하면 사라집니다.</b> 다음 판에 다시 사야 합니다.</p>
+    <p class="note">칸마다 하나씩 장착됩니다. 이미 산 장비를 누르면 그것으로 바꿔 낍니다.<br>
+      <b>장비는 환생하면 사라집니다.</b> 다음 판에 다시 사야 합니다.</p>
+  </div>
+</div>
+
+<div class="modal" id="achshop" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="achshop-title">
+    <div class="sheethead">
+      <h2 id="achshop-title">🏆 업적</h2>
+      <button class="iconbtn" id="achshop-close" aria-label="닫기">✕</button>
+    </div>
+    <p class="note" id="achsum"></p>
+    <div class="achlist" id="achlist"></div>
+    <p class="note">업적은 <b>환생해도 사라지지 않습니다.</b> 하나 달성할 때마다 모든 수치가 1%씩 오릅니다.</p>
   </div>
 </div>
 
@@ -747,6 +818,13 @@ const CRIT_CAP    = 0.95;   // 무기·영혼까지 더한 전체 상한
 // 이렇게 맞춰야 마지막 무기도 영혼 강화도 "이미 상한이라 의미 없는" 물건이 되지 않는다.
 const critOf = n => Math.min(CRIT_UP_CAP, CRIT_BASE + CRIT_STEP * n);
 
+const GUARD_CAP = 0.60;     // '단단함'만으로 줄일 수 있는 피해 상한
+const DEF_CAP   = 0.85;     // 단단함 + 방어구를 합쳐도 이 밑으로는 못 내려간다
+const guardOf = n => Math.min(GUARD_CAP, 0.02 * n);
+const BASE_JPS = 1;         // 젤리밭 0단계에서도 도는 기본 수입.
+// 0이면 때리기 전까지 수입이 완전히 0이라, 손을 떼는 순간 게임이 멈춰 버린다.
+// 방치형에서 "아무것도 안 일어나는 상태"는 그 자체로 가장 큰 밸런스 붕괴다.
+
 const UPGRADES = [
   // id는 세이브의 키다. 표시 문구가 '쓰다듬기'에서 '때리기'로 바뀌어도
   // 'pat'을 그대로 둬야 기존 플레이어의 레벨이 날아가지 않는다.
@@ -756,16 +834,22 @@ const UPGRADES = [
     desc: n => `크리티컬 확률 ${(critOf(n) * 100).toFixed(0)}% · 젤리 x${CRIT_MULT}`,
     maxed: n => critOf(n) >= CRIT_UP_CAP },
   { id: 'field',  name: '젤리밭', base: 60,  growth: 1.18,
-    desc: n => `초당 젤리 +${(n * 0.5).toFixed(1)}` },
+    desc: n => `초당 젤리 +${(BASE_JPS + n * 0.5).toFixed(1)}` },
   { id: 'digest', name: '소화력', base: 250, growth: 1.25,
     desc: n => `먹이 경험치 x${(1 + 0.25 * n).toFixed(2)}` },
   { id: 'power',  name: '힘 훈련', base: 120, growth: 1.22,
-    desc: n => `공격력 +${n * 2}` },
+    desc: n => `공격력 +${n * 3}` },
   { id: 'vit',    name: '체력 단련', base: 90, growth: 1.20,
     desc: n => `최대 체력 +${n * 30}` },
   { id: 'haste',  name: '공격 속도', base: 150, growth: 1.28,
     desc: n => `공격 속도 x${Math.min(HASTE_CAP, 1 + 0.08 * n).toFixed(2)}`,
     maxed: n => 1 + 0.08 * n >= HASTE_CAP },
+  // 아래 둘은 '버티기'와 '사냥 수입'을 따로 키우는 축이다.
+  { id: 'guard',  name: '단단함', base: 140, growth: 1.21,
+    desc: n => `받는 피해 -${(guardOf(n) * 100).toFixed(0)}%`,
+    maxed: n => guardOf(n) >= GUARD_CAP },
+  { id: 'greed',  name: '탐욕',   base: 300, growth: 1.26,
+    desc: n => `처치 젤리 +${n * 20}%` },
 ];
 
 /* 영혼 강화 — 환생으로 얻은 영혼으로 산다.
@@ -783,26 +867,94 @@ const SOUL_UPGRADES = [
   { id: 'scrit',  name: '영혼의 예리함', base: 4, growth: 1.8,
     desc: n => `크리티컬 확률 +${(n * 0.5).toFixed(1)}%`,
     maxed: n => n >= 10 },
+  { id: 'sboss',  name: '영혼의 포식',   base: 5, growth: 1.8,
+    desc: n => `보스에게 주는 피해 +${n * 25}%` },
+  { id: 'sdream', name: '영혼의 꿈',     base: 4, growth: 1.7,
+    desc: n => `자리 비움 보상 상한 ${OFFLINE_CAP_H + n * 4}시간`,
+    maxed: n => n >= 10 },
 ];
 
-/* 무기 — 업그레이드와 달리 한 번만 사고, 하나만 장착한다.
-   요구 레벨이 20씩 올라가고 성능도 등급마다 계단식으로 뛴다.
-   가격 증가율(약 15배)이 공격력 증가율(약 4.7배)보다 크기 때문에
-   "다음 무기"는 항상 한참 모아야 하는 목표로 남는다.
-   무기는 환생하면 초기화된다(rebirth 참고) — 판마다 다시 사야 한다. */
+/* 장비 — 무기·방어구·장신구를 한 칸씩 낀다. 업그레이드와 달리 한 번만 사고,
+   요구 레벨이 있어서 "레벨을 올릴 이유"가 되기도 한다.
+   가격 증가율이 성능 증가율보다 크기 때문에 다음 장비는 항상 한참 모아야 하는 목표다.
+   장비는 환생하면 초기화된다(rebirth 참고) — 판마다 다시 산다. */
 const WEAPONS = [
-  { id: 'stick',  name: '나무 막대', icon: '🪵', level: 20,  cost: 1e3, atk: 15,    crit: 0.02 },
-  { id: 'axe',    name: '돌 도끼',   icon: '🪓', level: 40,  cost: 1.2e4, atk: 70,  crit: 0.04 },
-  { id: 'dagger', name: '녹슨 단검', icon: '🗡️', level: 60,  cost: 1.5e5, atk: 320, crit: 0.06 },
-  { id: 'sword',  name: '강철 검',   icon: '⚔️', level: 80,  cost: 2e6, atk: 1500,  crit: 0.08 },
-  { id: 'spear',  name: '화염 창',   icon: '🔥', level: 100, cost: 3e7, atk: 7000,  crit: 0.11 },
-  { id: 'scythe', name: '영혼 낫',   icon: '🌙', level: 120, cost: 5e8, atk: 35000, crit: 0.15 },
+  { id: 'stick',  name: '나무 막대', icon: '🪵', level: 20,  cost: 1e3,   atk: 15,    crit: 0.02 },
+  { id: 'axe',    name: '돌 도끼',   icon: '🪓', level: 40,  cost: 1.2e4, atk: 70,    crit: 0.04 },
+  { id: 'dagger', name: '녹슨 단검', icon: '🗡️', level: 60,  cost: 1.5e5, atk: 320,   crit: 0.06 },
+  { id: 'sword',  name: '강철 검',   icon: '⚔️', level: 80,  cost: 2e6,   atk: 1500,  crit: 0.08 },
+  { id: 'spear',  name: '화염 창',   icon: '🔥', level: 100, cost: 3e7,   atk: 7000,  crit: 0.11 },
+  { id: 'scythe', name: '영혼 낫',   icon: '🌙', level: 120, cost: 5e8,   atk: 35000, crit: 0.15 },
+  { id: 'hammer', name: '별빛 망치', icon: '🔨', level: 150, cost: 9e9,   atk: 1.8e5, crit: 0.16 },
+  { id: 'katana', name: '용린 도',   icon: '🐲', level: 185, cost: 1.6e11, atk: 9e5,  crit: 0.17 },
+  { id: 'staff',  name: '심연의 지팡이', icon: '🔮', level: 225, cost: 3e12, atk: 4.5e6, crit: 0.18 },
+  { id: 'fang',   name: '신성한 송곳니', icon: '🦷', level: 270, cost: 6e13, atk: 2.4e7, crit: 0.20 },
 ];
 
-// 몬스터 성장 곡선. 체력의 지수(1.55)가 보상의 지수(1.25)보다 크기 때문에
+// 방어구 — 받는 피해를 줄이고 체력을 올린다. 깊은 층으로 내려가는 열쇠다.
+const ARMORS = [
+  { id: 'rag',    name: '헝겊 조각',   icon: '🧻', level: 10,  cost: 400,   red: 0.05, hp: 120 },
+  { id: 'leather',name: '가죽 갑옷',   icon: '🟫', level: 35,  cost: 9e3,   red: 0.10, hp: 900 },
+  { id: 'chain',  name: '사슬 갑옷',   icon: '⛓️', level: 65,  cost: 2.4e5, red: 0.16, hp: 7e3 },
+  { id: 'plate',  name: '판금 갑옷',   icon: '🛡️', level: 95,  cost: 6e6,   red: 0.22, hp: 5e4 },
+  { id: 'rune',   name: '룬 각인 갑옷', icon: '🪬', level: 130, cost: 2e8,  red: 0.28, hp: 4e5 },
+  { id: 'dragon', name: '용비늘 갑옷', icon: '🐉', level: 175, cost: 8e10,  red: 0.34, hp: 3e6 },
+  { id: 'abyss',  name: '심연의 외피', icon: '🕳️', level: 230, cost: 4e12,  red: 0.40, hp: 2e7 },
+];
+
+// 장신구 — 젤리 수입과 크리티컬을 올린다. 전투보다 경제 쪽 축이다.
+const TRINKETS = [
+  { id: 'clover', name: '네잎클로버', icon: '🍀', level: 15,  cost: 1.5e3, jelly: 0.15, crit: 0.01 },
+  { id: 'bell',   name: '은방울',     icon: '🔔', level: 45,  cost: 4e4,   jelly: 0.35, crit: 0.02 },
+  { id: 'ring',   name: '황금 반지',  icon: '💍', level: 75,  cost: 1.2e6, jelly: 0.60, crit: 0.03 },
+  { id: 'gem',    name: '별의 보석',  icon: '💎', level: 110, cost: 5e7,   jelly: 1.00, crit: 0.04 },
+  { id: 'crown',  name: '작은 왕관',  icon: '👑', level: 155, cost: 3e9,   jelly: 1.60, crit: 0.05 },
+  { id: 'heart',  name: '용의 심장',  icon: '❤️‍🔥', level: 205, cost: 2e11, jelly: 2.50, crit: 0.06 },
+];
+
+/* 액티브 스킬 — 방치만 하면 심심하고, 손이 할 일이 있으면 붙어 있게 된다.
+   쿨다운은 세이브하지 않는다(새로고침하면 바로 쓸 수 있다). */
+const SKILLS = [
+  { id: 'feast', name: '폭식', icon: '🍬', level: 15, cd: 60,  dur: 12,
+    desc: '12초간 젤리 획득 x3' },
+  { id: 'rage',  name: '분노', icon: '💢', level: 30, cd: 90,  dur: 12,
+    desc: '12초간 공격력 x2' },
+  { id: 'iron',  name: '철갑', icon: '🛡️', level: 45, cd: 120, dur: 8,
+    desc: '체력 전부 회복 + 8초간 피해 무효' },
+];
+
+/* 업적 — 영구적이다(환생해도 남는다). 하나 달성할 때마다 모든 수치가 1%씩 오르고,
+   영혼도 조금 준다. 장기 목표이자 "뭘 더 해볼까"의 목록 역할을 한다. */
+const ACHIEVEMENTS = [
+  { id: 'kill10',   name: '첫 사냥',     desc: '몬스터 10마리 처치',   soul: 1, test: () => state.lt.kills >= 10 },
+  { id: 'kill200',  name: '사냥꾼',      desc: '몬스터 200마리 처치',  soul: 2, test: () => state.lt.kills >= 200 },
+  { id: 'kill5k',   name: '학살자',      desc: '몬스터 5,000마리 처치', soul: 5, test: () => state.lt.kills >= 5000 },
+  { id: 'kill50k',  name: '재앙',        desc: '몬스터 50,000마리 처치', soul: 12, test: () => state.lt.kills >= 50000 },
+  { id: 'boss1',    name: '첫 보스',     desc: '보스 1마리 처치',      soul: 2, test: () => state.lt.bossKills >= 1 },
+  { id: 'boss25',   name: '보스 사냥꾼', desc: '보스 25마리 처치',     soul: 5, test: () => state.lt.bossKills >= 25 },
+  { id: 'boss200',  name: '왕을 먹는 자', desc: '보스 200마리 처치',   soul: 15, test: () => state.lt.bossKills >= 200 },
+  { id: 'stage25',  name: '지하 25층',   desc: '25층 도달',            soul: 1, test: () => state.lt.maxStage >= 25 },
+  { id: 'stage100', name: '지하 100층',  desc: '100층 도달',           soul: 3, test: () => state.lt.maxStage >= 100 },
+  { id: 'stage500', name: '심연',        desc: '500층 도달',           soul: 8, test: () => state.lt.maxStage >= 500 },
+  { id: 'stage2k',  name: '바닥 없는 굴', desc: '2,000층 도달',        soul: 20, test: () => state.lt.maxStage >= 2000 },
+  { id: 'lv50',     name: '무럭무럭',    desc: '레벨 50 달성',         soul: 1, test: () => state.level >= 50 },
+  { id: 'lv200',    name: '거대 슬라임', desc: '레벨 200 달성',        soul: 4, test: () => state.level >= 200 },
+  { id: 'lv1000',   name: '슬라임 군주', desc: '레벨 1,000 달성',      soul: 15, test: () => state.level >= 1000 },
+  { id: 'reb1',     name: '다시 태어나다', desc: '환생 1회',           soul: 2, test: () => state.lt.rebirths >= 1 },
+  { id: 'reb10',    name: '윤회',        desc: '환생 10회',            soul: 10, test: () => state.lt.rebirths >= 10 },
+  { id: 'click1k',  name: '손맛',        desc: '1,000번 때리기',       soul: 1, test: () => state.lt.clicks >= 1000 },
+  { id: 'click20k', name: '쇠주먹',      desc: '20,000번 때리기',      soul: 6, test: () => state.lt.clicks >= 20000 },
+  { id: 'gearfull', name: '완전 무장',   desc: '무기·방어구·장신구를 모두 장착', soul: 3,
+    test: () => state.equipped && state.equippedArmor && state.equippedTrinket },
+  { id: 'weapall',  name: '수집가',      desc: '무기 전부 수집 (한 판 안에서)', soul: 25,
+    test: () => state.weapons.length >= WEAPONS.length },
+];
+
+// 몬스터 성장 곡선. 체력의 지수(1.5)가 보상의 지수(1.4)보다 크기 때문에
 // 층이 올라갈수록 사냥이 느려지고, 그래서 공격력에 투자할 이유가 생긴다.
-// 이 두 숫자의 차이가 전투 파트의 난이도 전체를 결정한다.
-// 20층까지의 몬스터. 21층부터는 앞머리에 등급 수식어를 붙이며 다시 돈다.
+// 다만 예전(1.55 대 1.25)처럼 차이를 크게 두면 층이 오를수록 초당 수입이
+// 오히려 줄어들어서, 깊이 내려갈수록 가난해지는 이상한 곡선이 된다.
+// 30층까지의 몬스터. 31층부터는 앞머리에 등급 수식어를 붙이며 다시 돈다.
 const MONSTERS = [
   { name: '들쥐',      icon: '🐀' },
   { name: '박쥐',      icon: '🦇' },
@@ -824,24 +976,44 @@ const MONSTERS = [
   { name: '크라켄',    icon: '🐙' },
   { name: '리치',      icon: '💀' },
   { name: '마왕',      icon: '😈' },
+  { name: '불개미',    icon: '🐜' },
+  { name: '얼음 늑대', icon: '🐕' },
+  { name: '해골 기사', icon: '🏴' },
+  { name: '수정 거인', icon: '💠' },
+  { name: '그림자',    icon: '🌑' },
+  { name: '화염 정령', icon: '🔥' },
+  { name: '심해 고래', icon: '🐋' },
+  { name: '천둥새',    icon: '🦅' },
+  { name: '공허 벌레', icon: '🦟' },
+  { name: '별의 수호자', icon: '🌟' },
 ];
-const TIERS = ['', '강화된 ', '흉포한 ', '심연의 ', '전설의 '];
+const TIERS = ['', '강화된 ', '흉포한 ', '심연의 ', '전설의 ', '태고의 ', '멸망의 ', '별을 삼킨 '];
+
+/* 보스 — 10층마다 한 마리. 체력이 많은 대신 보상도 크고,
+   그 층을 처음 넘길 때는 영혼도 하나 준다. 방치 중에도 "다음 보스까지"라는
+   짧은 목표가 계속 생기게 하는 장치다. */
+const BOSS_EVERY  = 10;
+const BOSS_HP     = 5;    // 체력 배수
+const BOSS_REWARD = 7;    // 젤리 배수
+const BOSS_EXP    = 5;    // 경험치 배수
+const isBoss = s => s % BOSS_EVERY === 0;
+const SOUL_FLOOR = 50;   // 영혼을 주는 보스 층 간격 (처음 넘을 때 한 번)
+
 // 기본 체력 10 + 기본 공격력 2 = 첫 몬스터를 5초에 잡는다.
 // 시작 직후 첫 보상이 몇 초 안에 들어와야 플레이어가 남는다.
-const hpOfStage     = s => Math.floor(10 * Math.pow(s, 1.55));
-const rewardOfStage = s => Math.floor(8 * Math.pow(s, 1.25));
+const hpOfStage     = s => Math.floor(10 * Math.pow(s, 1.5)) * (isBoss(s) ? BOSS_HP : 1);
+const rewardOfStage = s => Math.floor(8 * Math.pow(s, 1.4)) * (isBoss(s) ? BOSS_REWARD : 1);
 // 처치 경험치. 층당 요구 경험치(50 x 레벨^1.6)를 감안해, 자기 수준 근처 층을
 // 대여섯 번 잡으면 한 레벨이 오르도록 잡았다. 사냥만으로도 레벨이 붙게 해
 // 젤리를 먹이는 것 말고 두 번째 성장 경로를 만든다.
-const expOfStage    = s => Math.floor(12 * Math.pow(s, 1.35));
-// 몬스터의 초당 피해. 지수를 체력(1.55)보다 훨씬 낮게 잡아, 층이 오를수록
+const expOfStage    = s => Math.floor(12 * Math.pow(s, 1.35)) * (isBoss(s) ? BOSS_EXP : 1);
+// 몬스터의 초당 피해. 지수를 체력(1.5)보다 낮게 잡아, 층이 오를수록
 // '못 이기는' 게 아니라 '오래 걸리는' 쪽으로 먼저 막히게 했다.
 //
 // 생존 조건은 단순하다: 초당 재생 >= 초당 피해면 절대 안 죽는다.
-//   재생 = 최대체력 x 0.05,  피해 = 0.35 x 층^1.05
+//   재생 = 최대체력 x 0.05,  피해 = 0.5 x 층^1.1 x (1 - 피해감소)
 // 그래서 이 세 숫자의 관계가 "몇 층에서 막히는가"를 통째로 결정한다.
-// 레벨 1 맨몸이 15층까지, 레벨 30이면 체력 단련 없이도 30층까지 버틴다.
-const dmgOfStage    = s => 0.35 * Math.pow(s, 1.05);
+const dmgOfStage    = s => 0.5 * Math.pow(s, 1.1) * (isBoss(s) ? 2 : 1);
 
 const HP_REGEN = 0.05;   // 초당 최대 체력의 5% (완전 회복까지 20초)
 const STUN_SEC = 2.5;    // 쓰러진 뒤 못 움직이는 시간
@@ -853,13 +1025,28 @@ const RETREAT  = 3;      // 쓰러지면 물러나는 층 수
 const HIT_PERIOD = 1.1;
 const HIT_DELAY  = 0.6;
 const HASTE_CAP  = 4.0;   // 공격 속도 상한. 단계당 +8%이므로 38단계에서 도달한다.
-const FLOOR_TIME = 20;   // 층당 제한 시간(초)
+/* 제한 시간은 없앴다. 예전에는 20초 안에 못 잡으면 몬스터 체력이 통째로
+   되돌아갔는데, 그 결과 공격력이 한 뼘 모자란 층에서 수천 번을 때리고도
+   1의 진척도 없이 영원히 멈춰 버렸다(실제로 완전 방치 시 3층에서 24시간 정체).
+   지금은 몬스터 체력이 그대로 남아서, 느릴지언정 언젠가는 반드시 잡는다.
+   대신 그동안 슬라임이 계속 피해를 입으므로, 너무 깊은 층에서는 쓰러져서
+   물러나게 된다 — 막히는 지점을 '시간'이 아니라 '체력'이 정한다. */
+const CLICK_CAP = 10;     // 초당 인정되는 때리기 횟수. 매크로로 무한히 벌지 못하게 한다.
+const CLICK_ATK = 0.5;    // 때리기 한 번이 주는 전투 피해 (공격력 배수)
 const monsterOf     = s => MONSTERS[(s - 1) % MONSTERS.length];
 const tierOfStage   = s => Math.min(Math.floor((s - 1) / MONSTERS.length), TIERS.length - 1);
-const nameOfStage   = s => TIERS[tierOfStage(s)] + monsterOf(s).name;
+/* 몬스터 30종 x 등급 8개 = 240층이면 이름이 한 바퀴 돈다. 그 뒤로는
+   몇 바퀴째인지를 뒤에 붙여, 수천 층을 내려가도 같은 이름이 그대로 반복되지 않게 한다. */
+const LOOP_SPAN = MONSTERS.length * TIERS.length;
+function nameOfStage(s) {
+  const loop = Math.floor((s - 1) / LOOP_SPAN);
+  return TIERS[tierOfStage(s)] + monsterOf(s).name
+       + (loop > 0 ? ` ${loop + 1}회차` : '')
+       + (isBoss(s) ? ' 대장' : '');
+}
 
 const REBIRTH_LEVEL = 20;     // 환생 가능 최소 레벨
-const OFFLINE_CAP_H = 8;      // 오프라인 보상 상한(시간)
+const OFFLINE_CAP_H = 8;      // 오프라인 보상 기본 상한(시간) — 영혼의 꿈으로 늘린다
 const SAVE_KEY = 'slime-idle-v1';
 
 /* ============================================================
@@ -880,6 +1067,14 @@ function freshState() {
     soulsTotal: 0,     // 지금까지 얻은 영혼의 총합. 전체 배율은 이쪽을 본다.
     weapons: [],       // 보유한 무기 id 목록
     equipped: null,    // 장착 중인 무기 id (없으면 맨손)
+    armors: [],  equippedArmor: null,
+    trinkets: [], equippedTrinket: null,
+    bossBest: 0,       // 영혼을 준 가장 깊은 보스 층 — 같은 보스로 두 번 받지 못하게
+    autoFeed: false,   // 자동 먹이 주기
+    /* 아래 둘은 환생해도 살아남는다 (rebirth 참고).
+       업적은 영구 보상이고, lt(lifetime)는 그 업적의 판정 근거다. */
+    ach: {},
+    lt: { kills: 0, bossKills: 0, clicks: 0, maxStage: 1, rebirths: 0 },
     lastSeen: Date.now(),
   };
 }
@@ -892,6 +1087,9 @@ const levelMult = () => 1 + 0.0125 * (state.level - 1);
 // 전체 배율은 '지금까지 얻은' 영혼을 본다. 영혼을 강화에 써도 이 배율은 줄지 않는다.
 // 쓸지 말지를 저울질하게 만들면 영혼 상점을 아예 안 쓰게 된다.
 const soulMult  = () => 1 + 0.10 * state.soulsTotal;
+// 업적 하나당 모든 수치 +1%. 하나하나는 작지만 20개를 다 모으면 1.2배가 된다.
+const achCount = () => Object.keys(state.ach).length;
+const achMult  = () => 1 + 0.01 * achCount();
 
 // 영혼 강화 — 전부 곱셈(예리함만 가산)
 const sJelly = () => 1 + 0.10 * state.soulUp.sjelly;
@@ -899,19 +1097,52 @@ const sAtk   = () => 1 + 0.15 * state.soulUp.satk;
 const sVit   = () => 1 + 0.20 * state.soulUp.svit;
 const sExp   = () => 1 + 0.15 * state.soulUp.sexp;
 const sCrit  = () => 0.005 * state.soulUp.scrit;
+const sBoss  = () => 1 + 0.25 * state.soulUp.sboss;
+const offlineCapH = () => OFFLINE_CAP_H + 4 * state.soulUp.sdream;
 const soulCostOf = u => Math.floor(u.base * Math.pow(u.growth, state.soulUp[u.id]));
-const perClick  = () => (1 + state.up.pat) * levelMult() * soulMult() * sJelly();
+
+// 장비 — 칸마다 하나씩, 없으면 null
 const weaponOf   = () => WEAPONS.find(w => w.id === state.equipped) || null;
+const armorOf    = () => ARMORS.find(a => a.id === state.equippedArmor) || null;
+const trinketOf  = () => TRINKETS.find(t => t.id === state.equippedTrinket) || null;
 const weaponAtk  = () => weaponOf()?.atk ?? 0;
 const weaponCrit = () => weaponOf()?.crit ?? 0;
-const critChance = () => Math.min(CRIT_CAP, critOf(state.up.crit) + weaponCrit() + sCrit());
-const perSec    = () => 0.5 * state.up.field * levelMult() * soulMult() * sJelly();
-const expMult   = () => (1 + 0.25 * state.up.digest) * soulMult() * sExp();
+const armorHp    = () => armorOf()?.hp ?? 0;
+const armorRed   = () => armorOf()?.red ?? 0;
+const trinketJelly = () => 1 + (trinketOf()?.jelly ?? 0);
+const trinketCrit  = () => trinketOf()?.crit ?? 0;
+
+/* 스킬 상태 — 남은 지속 시간과 쿨다운(초). 세이브하지 않는다:
+   새로고침으로 쿨을 돌리는 건 혼자 하는 방치형에서 막을 가치가 없고,
+   저장했다가 시계를 건드리면 오히려 꼬인다. */
+const skillLeft = { feast: 0, rage: 0, iron: 0 };
+const skillCd   = { feast: 0, rage: 0, iron: 0 };
+const skillOn   = id => skillLeft[id] > 0;
+
+const critChance = () => Math.min(CRIT_CAP, critOf(state.up.crit) + weaponCrit() + trinketCrit() + sCrit());
+/* 젤리 배율은 두 갈래다.
+   - jellyMult: 때리기와 초당 수입에 걸린다. 레벨·영혼이 곱으로 들어간다.
+   - killJellyMult: 사냥 보상에 걸린다. 레벨과 영혼 배율을 일부러 뺐다.
+
+   사냥 보상까지 레벨 배율을 태우면 '젤리 -> 먹이 -> 레벨 -> 더 많은 젤리'가
+   닫힌 고리가 되어 수치가 유한 시간에 발산한다(실측: 4시간이면 층 4만,
+   레벨 6천만). 사냥 수입은 '얼마나 깊이 내려왔는가'만 보게 두고, 레벨은
+   때리기·초당 수입 쪽에서만 보상한다. */
+const jellyMult = () => levelMult() * soulMult() * achMult() * sJelly() * trinketJelly() * (skillOn('feast') ? 3 : 1);
+const killJellyMult = () => achMult() * sJelly() * trinketJelly() * (1 + 0.2 * state.up.greed) * (skillOn('feast') ? 3 : 1);
+const perClick  = () => (1 + state.up.pat) * jellyMult();
+const perSec    = () => (BASE_JPS + 0.5 * state.up.field) * jellyMult();
+const expMult   = () => (1 + 0.25 * state.up.digest) * soulMult() * achMult() * sExp();
 // 공격력에는 levelMult을 걸지 않는다 — 레벨업으로는 공격력이 오르지 않고,
 // 힘 훈련·무기·영혼의 검기로만 오른다.
-const atk        = () => (2 + 2 * state.up.power + weaponAtk()) * soulMult() * sAtk();
+const atk        = () => (2 + 3 * state.up.power + weaponAtk()) * soulMult() * achMult() * sAtk()
+                         * (skillOn('rage') ? 2 : 1) * (isBoss(state.stage) ? sBoss() : 1);
 const attackSpeed = () => Math.min(HASTE_CAP, 1 + 0.08 * state.up.haste);
-const slimeMaxHp = () => (120 + 30 * state.up.vit) * levelMult() * soulMult() * sVit();
+const slimeMaxHp = () => (120 + 30 * state.up.vit + armorHp()) * levelMult() * soulMult() * achMult() * sVit();
+// 받는 피해 — 단단함과 방어구가 곱으로 겹치되, 합쳐도 DEF_CAP 밑으로는 못 내려간다.
+// 완전 무효가 되면 깊은 층에서 '죽는다'는 제동 장치가 통째로 사라진다.
+const damageTaken = s => skillOn('iron') ? 0
+  : dmgOfStage(s) * Math.max(1 - DEF_CAP, (1 - guardOf(state.up.guard)) * (1 - armorRed()));
 const expToNext = () => Math.floor(50 * Math.pow(state.level, 1.6));
 // 한 번에 몇 단계씩 살지: 1 | 10 | 'max'.
 // 게임 진행이 아니라 화면 조작 상태라 state에 넣지 않는다(= 세이브되지 않는다).
@@ -957,24 +1188,44 @@ const soulGain  = () => Math.floor(state.level / 5);
 /* ============================================================
    4. 행동
    ============================================================ */
+/* 때리기 — 젤리를 주고 전투에도 거든다.
+   초당 CLICK_CAP회까지만 보상으로 쳐 준다. 상한이 없으면 연타 매크로 하나로
+   초당 수입이 수십 배가 되어, 방치형의 모든 가격 균형이 무의미해진다.
+   넘긴 입력은 연출만 보여 주고 수치는 건드리지 않는다. */
+let clickStamps = [];
 function hit(x, y) {
-  const crit = Math.random() < critChance();
-  const gain = perClick() * (crit ? CRIT_MULT : 1);
-  state.jelly += gain;
-  popText((crit ? '크리! +' : '+') + fmt(gain), x, y, crit);
-  burst(x, y, crit);
+  const now = performance.now();
+  clickStamps = clickStamps.filter(t => now - t < 1000);
+  if (clickStamps.length < CLICK_CAP) {
+    clickStamps.push(now);
+    state.lt.clicks++;
+    const crit = Math.random() < critChance();
+    const gain = perClick() * (crit ? CRIT_MULT : 1);
+    state.jelly += gain;
+    popText((crit ? '크리! +' : '+') + fmt(gain), x, y, crit);
+    burst(x, y, crit);
+    if (stunLeft <= 0) damageMonster(atk() * CLICK_ATK);   // 때린 만큼 몬스터도 아프다
+  }
   squish();
   hurtFace();
 }
 
 /* 경험치를 넣고 레벨업을 처리한다. 먹이와 사냥 두 경로가 같은 함수를 쓴다.
-   레벨업은 그 자체로 능력치를 올린다 — levelMult()가 레벨당 +5%를 공격력·체력·
+   레벨업은 그 자체로 능력치를 올린다 — levelMult()가 레벨당 +1.25%를 체력·
    젤리 획득에 곱으로 얹기 때문이다. 여기서는 추가로 체력을 가득 채워 준다:
    방금 강해졌는데 빈사 상태로 다음 층에 부딪히면 성장한 느낌이 안 산다. */
+/* 후반에는 젤리를 한참 모았다가 한 번에 먹이는 일이 흔하다. 그때 레벨이
+   수십만씩 오르는데, 전부 한 프레임에 처리하면 게임이 몇 초씩 얼어붙는다.
+   한 번에 MAX_LEVELUPS 만큼만 올리고 남은 경험치는 그대로 둔다 —
+   루프(frame)가 다음 프레임에 이어서 처리하므로 레벨이 차르륵 올라가는
+   연출이 되고, 숫자도 한 톨 어긋나지 않는다. */
+const MAX_LEVELUPS = 500;
 function gainExp(amount) {
   state.exp += amount;
+  // 무한대가 한 번 끼면 그 뒤 모든 계산이 NaN 으로 번진다. 들어오는 쪽에서 막는다.
+  if (!isFinite(state.exp)) state.exp = 1e300;
   let ups = 0;
-  while (state.exp >= expToNext()) {
+  while (state.exp >= expToNext() && ups < MAX_LEVELUPS) {
     state.exp -= expToNext();
     state.level++;
     ups++;
@@ -982,6 +1233,7 @@ function gainExp(amount) {
   if (ups > 0) {
     state.hp = slimeMaxHp();
     note(`레벨 ${state.level} 달성! 능력치 상승 · 체력 회복 (전체 x${levelMult().toFixed(2)})`);
+    checkAch();
   }
   return ups;
 }
@@ -993,70 +1245,112 @@ function feed() {
   squish();
 }
 
-/* 서로 초당 피해를 주고받는다. 슬라임이 쓰러지면 몇 층 물러나 기절했다가
+/* 업적 — 조건을 만족한 것을 한 번에 처리한다. 달성하면 영혼과 영구 배율이 붙는다. */
+function checkAch() {
+  for (const a of ACHIEVEMENTS) {
+    if (state.ach[a.id]) continue;
+    let ok = false;
+    try { ok = a.test(); } catch (e) {}
+    if (!ok) continue;
+    state.ach[a.id] = true;
+    state.souls += a.soul;
+    state.soulsTotal += a.soul;
+    note(`🏆 ${a.name} — ${a.desc} (영혼 +${a.soul} · 전체 +1%)`);
+  }
+}
+
+/* 액티브 스킬 — 쿨다운과 지속 시간을 초 단위로 센다. */
+function tickSkills(dt) {
+  for (const k of SKILLS) {
+    if (skillLeft[k.id] > 0) skillLeft[k.id] = Math.max(0, skillLeft[k.id] - dt);
+    if (skillCd[k.id]   > 0) skillCd[k.id]   = Math.max(0, skillCd[k.id] - dt);
+  }
+}
+function useSkill(k) {
+  if (state.level < k.level || skillCd[k.id] > 0) return;
+  skillCd[k.id]   = k.cd;
+  skillLeft[k.id] = k.dur;
+  if (k.id === 'iron') state.hp = slimeMaxHp();
+  note(`${k.icon} ${k.name} 발동! ${k.desc}`);
+}
+
+/* 서로 피해를 주고받는다. 슬라임이 쓰러지면 몇 층 물러나 기절했다가
    완전 회복하고 다시 붙는다. 진행을 되돌리는 벌이 아니라 속도 제한 장치다 —
    방치형에서 진척이 크게 날아가면 그 자리에서 게임을 접는다. */
-// 전투 진행 상태 — 전부 세이브에 넣지 않는다. 새로고침하면 그 층을 처음부터 다시 한다.
+// 전투 진행 상태 — 전부 세이브에 넣지 않는다. 몬스터 체력만 세이브에 남는다.
 let stunLeft = 0;            // 기절 남은 시간(초)
-let floorT   = FLOOR_TIME;   // 이번 층에 남은 제한 시간(초)
 let cycleT   = 0;            // 이번 공격 주기의 경과 시간(초)
 let struck   = false;        // 이번 주기에 이미 때렸는가
 
-/* 층을 (다시) 시작한다. 몬스터 체력·제한 시간·공격 주기를 한꺼번에 되돌린다.
-   층이 바뀌는 모든 경로(격파·시간초과·쓰러짐)가 여기를 지난다. */
+/* 층을 (다시) 시작한다. 몬스터 체력과 공격 주기를 되돌린다.
+   층이 바뀌는 모든 경로(격파·쓰러짐)가 여기를 지난다. */
 function startFloor() {
   state.monsterHp = hpOfStage(state.stage);
-  floorT = FLOOR_TIME;
   cycleT = 0;
   struck = false;
   playAttack();
 }
 
+/* 몬스터에게 피해를 넣고, 죽었으면 보상·다음 층까지 처리한다.
+   때리기와 자동 공격이 같은 길을 쓴다. 넘치는 피해는 버린다 — 한 번의 타격으로
+   잡을 수 있는 몬스터는 최대 한 마리다. 그래야 한 프레임에 수십 층이 날아가지 않는다. */
+function damageMonster(amount) {
+  state.monsterHp -= amount;
+  if (state.monsterHp > 0) return false;
+  const st = state.stage, boss = isBoss(st);
+  state.jelly += rewardOfStage(st) * killJellyMult();
+  gainExp(expOfStage(st) * expMult());
+  state.lt.kills++;
+  if (boss) {
+    state.lt.bossKills++;
+    slainFx();
+    /* 영혼은 50층마다, 그것도 처음 넘을 때만 준다.
+       보스마다 주면 깊이 내려갈수록 영혼이 쏟아져 전체 배율(soulMult)이
+       같이 치솟고, 그게 다시 깊이로 돌아오는 고리가 된다. */
+    if (st > state.bossBest) {
+      state.bossBest = st;
+      if (st % SOUL_FLOOR === 0) {
+        state.souls++; state.soulsTotal++;
+        note(`👑 ${st}층 보스 격파! 영혼 +1`);
+      }
+    }
+  }
+  state.stage++;
+  if (state.stage > state.lt.maxStage) state.lt.maxStage = state.stage;
+  startFloor();
+  checkAch();
+  return true;
+}
+
 function fight(dt) {
+  tickSkills(dt);
   if (stunLeft > 0) { stunLeft = Math.max(0, stunLeft - dt); return; }
 
   // 슬라임이 받는 피해와 재생은 연속이다. 이쪽까지 끊어서 넣으면
   // '재생 >= 피해면 안 죽는다'는 생존 규칙이 운에 흔들린다.
   const max = slimeMaxHp();
   state.hp = Math.min(max, state.hp + max * HP_REGEN * dt);
-  state.hp -= dmgOfStage(state.stage) * dt;
+  state.hp -= damageTaken(state.stage) * dt;
   if (state.hp <= 0) {
     state.stage = Math.max(1, state.stage - RETREAT);
     state.hp = slimeMaxHp();
     stunLeft = STUN_SEC;
     startFloor();
-    note(`슬라임이 쓰러졌습니다. ${state.stage}층으로 물러납니다.`, true);
-    return;
-  }
-
-  // 제한 시간 안에 못 잡으면 실패 — 같은 층을 처음부터 다시 한다
-  floorT -= dt;
-  if (floorT <= 0) {
     failFx();
-    note(`시간 초과! ${state.stage}층을 다시 도전합니다.`, true);
-    startFloor();
+    note(`슬라임이 쓰러졌습니다. ${state.stage}층으로 물러납니다.`, true);
     return;
   }
 
   /* 피해는 공격 모션이 닿는 순간에 한 번, 공격력만큼만 들어간다.
      예전처럼 초당 피해로 깎으면 체력바가 스르륵 줄어서 때리는 동작과 따로 논다.
-     한 번의 타격으로 잡을 수 있는 몬스터는 최대 한 마리다 — 넘치는 피해는 버린다.
-     그래야 한 프레임에 수십 층이 날아가지 않고 제한 시간도 의미를 갖는다. */
-  // 공격 속도가 오르면 주기와 타격 시점이 함께 줄어든다(비율은 유지).
-  // playAttack이 애니메이션 길이도 같은 배율로 맞추므로 동작과 타격이 안 어긋난다.
+     공격 속도가 오르면 주기와 타격 시점이 함께 줄어든다(비율은 유지).
+     playAttack이 애니메이션 길이도 같은 배율로 맞추므로 동작과 타격이 안 어긋난다. */
   const spd = attackSpeed();
   const delay = HIT_DELAY / spd, period = HIT_PERIOD / spd;
   cycleT += dt;
   if (!struck && cycleT >= delay) {
     struck = true;
-    state.monsterHp -= atk();
-    if (state.monsterHp <= 0) {
-      state.jelly += rewardOfStage(state.stage) * sJelly();
-      gainExp(expOfStage(state.stage) * expMult());   // 처치 보상 경험치
-      state.stage++;
-      startFloor();
-      return;
-    }
+    if (damageMonster(atk())) return;
   }
   if (cycleT >= period) { cycleT -= period; struck = false; playAttack(); }
 }
@@ -1068,15 +1362,23 @@ function buy(u) {
   state.up[u.id] += k;
 }
 
-// 무기 한 자루를 사거나, 이미 가진 무기로 갈아 끼운다.
-function buyWeapon(w) {
-  if (state.weapons.includes(w.id)) { state.equipped = w.id; return; }
-  if (state.level < w.level) return;
-  if (state.jelly < w.cost) return;
-  state.jelly -= w.cost;
-  state.weapons.push(w.id);
-  state.equipped = w.id;   // 방금 산 무기는 바로 들려 준다
-  note(`${w.icon} ${w.name}을(를) 손에 넣었습니다!`);
+/* 장비 세 칸(무기·방어구·장신구)은 사고 끼우는 방식이 똑같다.
+   표만 다르고 처리는 하나로 둔다. */
+const GEAR = {
+  weapon:  { list: WEAPONS,  own: 'weapons',  eq: 'equipped',        label: '무기' },
+  armor:   { list: ARMORS,   own: 'armors',   eq: 'equippedArmor',   label: '방어구' },
+  trinket: { list: TRINKETS, own: 'trinkets', eq: 'equippedTrinket', label: '장신구' },
+};
+function buyGear(kind, g) {
+  const slot = GEAR[kind];
+  if (state[slot.own].includes(g.id)) { state[slot.eq] = g.id; checkAch(); return; }
+  if (state.level < g.level) return;
+  if (state.jelly < g.cost) return;
+  state.jelly -= g.cost;
+  state[slot.own].push(g.id);
+  state[slot.eq] = g.id;   // 방금 산 장비는 바로 끼워 준다
+  note(`${g.icon} ${g.name}을(를) 손에 넣었습니다!`);
+  checkAch();
 }
 
 function buySoul(u) {
@@ -1090,15 +1392,17 @@ function buySoul(u) {
 function rebirth() {
   if (state.level < REBIRTH_LEVEL) return;
   const gained = soulGain();
-  // 영혼 강화만 판을 넘어 살아남는다. 무기는 초기화 — 매 판 다시 사야 한다.
-  const { soulUp } = state;
+  // 영혼 강화·업적·평생 기록만 판을 넘어 살아남는다. 장비는 초기화 — 매 판 다시 산다.
+  const { soulUp, ach, lt, autoFeed } = state;
   const souls = state.souls + gained;
   const soulsTotal = state.soulsTotal + gained;
+  lt.rebirths++;
   state = freshState();
-  Object.assign(state, { souls, soulsTotal, soulUp });
+  Object.assign(state, { souls, soulsTotal, soulUp, ach, lt, autoFeed });
   state.hp = slimeMaxHp();
   stunLeft = 0;
   startFloor();
+  checkAch();
   note(`환생! 영혼 ${gained}개를 얻어 전체 배율이 x${soulMult().toFixed(2)}가 되었습니다.`);
 }
 
@@ -1106,11 +1410,20 @@ function rebirth() {
    5. 루프 — 로직은 dt(초) 기반, 렌더는 매 프레임
    ============================================================ */
 let last = performance.now();
+let autoFeedT = 0;
 function frame(now) {
   const dt = Math.min((now - last) / 1000, 0.25);  // 탭 복귀 시 폭주 방지
   last = now;
   state.jelly += perSec() * dt;
+  if (!isFinite(state.jelly)) state.jelly = 1e300;
+  // 밀어둔 레벨업이 있으면 이어서 처리한다 (gainExp 의 MAX_LEVELUPS 참고)
+  if (state.exp >= expToNext()) gainExp(0);
   fight(dt);
+  // 자동 먹이 — 켜 두면 1초마다 모인 젤리를 통째로 경험치로 바꾼다
+  if (state.autoFeed) {
+    autoFeedT += dt;
+    if (autoFeedT >= 1) { autoFeedT = 0; feed(); }
+  }
   render();
   requestAnimationFrame(frame);
 }
@@ -1177,33 +1490,73 @@ function renderSoulShop() {
   }
 }
 
-// 무기 목록도 최초 1회만 만든다
+/* 장비 목록 — 무기·방어구·장신구가 생김새와 규칙이 같아 한 벌로 그린다.
+   탭을 바꾸면 같은 자리(#wlist)에 다시 그린다. */
+let gearTab = 'weapon';
+const gearStat = {
+  weapon:  g => `공격력 +${fmt(g.atk)} · 크리 +${(g.crit * 100).toFixed(0)}%`,
+  armor:   g => `받는 피해 -${(g.red * 100).toFixed(0)}% · 최대 체력 +${fmt(g.hp)}`,
+  trinket: g => `젤리 획득 +${(g.jelly * 100).toFixed(0)}% · 크리 +${(g.crit * 100).toFixed(0)}%`,
+};
 const wlistEl = $('wlist');
-const wrows = WEAPONS.map(w => {
-  const b = document.createElement('button');
-  b.className = 'w';
-  b.innerHTML = `<span class="wicon">${w.icon}</span>
-                 <span class="wmain"><span class="wname">${w.name}</span>
-                 <span class="wstat"></span></span><span class="wcost"></span>`;
-  b.onclick = () => buyWeapon(w);
-  wlistEl.appendChild(b);
-  return { w, b, stat: b.querySelector('.wstat'), cost: b.querySelector('.wcost') };
-});
 
 function renderShop() {
-  for (const r of wrows) {
-    const owned    = state.weapons.includes(r.w.id);
-    const equipped = state.equipped === r.w.id;
-    const locked   = !owned && state.level < r.w.level;
-    r.stat.textContent = `공격력 +${fmt(r.w.atk)} · 크리 +${(r.w.crit * 100).toFixed(0)}%`;
-    r.cost.textContent = equipped ? '장착중'
-                       : owned    ? '장착'
-                       : locked   ? `레벨 ${r.w.level} 필요`
-                       : fmt(r.w.cost);
-    r.b.classList.toggle('owned', owned);
-    r.b.classList.toggle('equipped', equipped);
-    r.b.classList.toggle('locked', locked);
-    r.b.disabled = equipped || (!owned && (locked || state.jelly < r.w.cost));
+  const slot = GEAR[gearTab];
+  wlistEl.innerHTML = '';
+  for (const g of slot.list) {
+    const owned    = state[slot.own].includes(g.id);
+    const equipped = state[slot.eq] === g.id;
+    const locked   = !owned && state.level < g.level;
+    const b = document.createElement('button');
+    b.className = 'w' + (owned ? ' owned' : '') + (equipped ? ' equipped' : '') + (locked ? ' locked' : '');
+    b.disabled = equipped || (!owned && (locked || state.jelly < g.cost));
+    b.innerHTML = `<span class="wicon">${g.icon}</span>
+      <span class="wmain"><span class="wname">${g.name}</span>
+      <span class="wstat">${gearStat[gearTab](g)}</span></span>
+      <span class="wcost">${equipped ? '장착중' : owned ? '장착' : locked ? `레벨 ${g.level} 필요` : fmt(g.cost)}</span>`;
+    b.onclick = () => { buyGear(gearTab, g); renderShop(); };
+    wlistEl.appendChild(b);
+  }
+}
+
+// 업적 목록 — 달성 여부만 바뀌므로 열 때마다 통째로 그린다
+function renderAch() {
+  const done = achCount();
+  $('achsum').innerHTML = `달성 <b>${done} / ${ACHIEVEMENTS.length}</b> · 전체 배율 <b>x${achMult().toFixed(2)}</b>`;
+  $('achlist').innerHTML = ACHIEVEMENTS.map(a => {
+    const ok = !!state.ach[a.id];
+    return `<div class="ach${ok ? ' done' : ''}">
+      <span class="a-ico">${ok ? '🏆' : '🔒'}</span>
+      <span class="a-main"><span class="a-name">${a.name}</span>
+      <span class="a-desc">${a.desc}</span></span>
+      <span class="a-rew">${ok ? '달성' : `영혼 +${a.soul}`}</span></div>`;
+  }).join('');
+}
+
+/* 스킬 버튼 — 해금 전에는 필요 레벨을, 쿨 중에는 남은 초를 보여 준다. */
+const skillRows = SKILLS.map(k => {
+  const b = document.createElement('button');
+  b.className = 'skill';
+  b.innerHTML = `<span class="sk-ico">${k.icon}</span><span class="sk-name">${k.name}</span>
+                 <span class="sk-sub"></span><i class="cdfill"></i>`;
+  b.title = k.desc;
+  b.onclick = () => useSkill(k);
+  $('skillrow').appendChild(b);
+  return { k, b, sub: b.querySelector('.sk-sub'), fill: b.querySelector('.cdfill') };
+});
+
+function renderSkills() {
+  for (const r of skillRows) {
+    const locked = state.level < r.k.level;
+    const on = skillLeft[r.k.id] > 0, cd = skillCd[r.k.id];
+    r.sub.textContent = locked ? `Lv.${r.k.level}`
+                      : on     ? skillLeft[r.k.id].toFixed(1) + 's'
+                      : cd > 0 ? Math.ceil(cd) + 's'
+                               : '준비';
+    r.b.classList.toggle('ready', !locked && cd <= 0 && !on);
+    r.b.classList.toggle('on', on);
+    r.b.disabled = locked || cd > 0;
+    r.fill.style.width = cd > 0 ? (cd / r.k.cd * 100) + '%' : '0%';
   }
 }
 
@@ -1215,16 +1568,22 @@ function render() {
   $('s-atk').textContent   = fmt(atk());
   $('s-spd').textContent   = 'x' + attackSpeed().toFixed(2);
   $('s-crit').textContent  = (critChance() * 100).toFixed(0) + '%';
-  const wp = weaponOf();
-  $('s-weapon').textContent = wp ? `${wp.icon} ${wp.name}` : '맨손';
+  const wp = weaponOf(), am = armorOf(), tk = trinketOf();
+  $('s-weapon').textContent = [wp ? wp.icon + ' ' + wp.name : '맨손', am?.icon, tk?.icon].filter(Boolean).join(' ');
   // 닫혀 있는 창을 매 프레임 갱신할 이유는 없다
   if (!$('wshop').hidden) renderShop();
 
   const maxHp = hpOfStage(state.stage);
   const hp = Math.max(0, state.monsterHp);
-  $('s-floor').textContent  = `${state.stage}층`;
-  $('s-timer').textContent  = Math.max(0, floorT).toFixed(1) + 's';
-  $('s-timer').classList.toggle('warn', floorT <= 5);
+  const boss = isBoss(state.stage);
+  $('s-floor').textContent  = `${state.stage}층${boss ? ' 👑' : ''}`;
+  $('s-floor').classList.toggle('boss', boss);
+  /* 제한 시간 대신 '이 속도로 몇 초 남았는지'를 보여 준다.
+     막히는 층에 왔다는 걸 숫자로 바로 알 수 있어야 강화하러 간다. */
+  const dps = atk() * attackSpeed() / HIT_PERIOD;
+  const eta = dps > 0 ? hp / dps : Infinity;
+  $('s-timer').textContent = eta > 3600 ? '한참 걸림' : '⚔ ' + Math.ceil(eta) + 's';
+  $('s-timer').classList.toggle('warn', eta > 60);
   $('e-hp').textContent     = `${fmt(hp)} / ${fmt(maxHp)}`;
   $('e-hpbar').style.width  = Math.min(100, hp / maxHp * 100) + '%';
   $('s-lvtag').textContent  = `Lv.${state.level}`;
@@ -1240,6 +1599,11 @@ function render() {
   $('s-weap').textContent = wp ? wp.icon : '';
 
   renderArena();
+  $('e-name').classList.toggle('boss', boss);
+  renderSkills();
+  $('autofeed').textContent = '자동 ' + (state.autoFeed ? '✓' : '✕');
+  $('autofeed').classList.toggle('on', !!state.autoFeed);
+  if (!$('achshop').hidden) renderAch();
   $('s-exp').textContent   = `${fmt(state.exp)} / ${fmt(need)}`;
   $('s-expbar').style.width = Math.min(100, state.exp / need * 100) + '%';
   $('feed').disabled = state.jelly < 1;
@@ -1379,14 +1743,23 @@ function load() {
     const base = freshState();
     state = { ...base, ...saved,
       up:     { ...base.up,     ...(saved.up     || {}) },
-      soulUp: { ...base.soulUp, ...(saved.soulUp || {}) } };
+      soulUp: { ...base.soulUp, ...(saved.soulUp || {}) },
+      ach:    (saved.ach && typeof saved.ach === 'object') ? saved.ach : {},
+      lt:     { ...base.lt, ...(saved.lt || {}) } };
   } catch {
     return;
   }
+  // 장비 칸·평생 기록이 없던 시절의 세이브를 지금 모양으로 맞춘다
+  for (const k of ['weapons', 'armors', 'trinkets']) if (!Array.isArray(state[k])) state[k] = [];
+  if (typeof state.bossBest !== 'number') state.bossBest = 0;
+  state.lt.maxStage = Math.max(state.lt.maxStage || 1, state.stage);
+  // 제한 시간이 있던 시절의 세이브는 몬스터 체력이 지금 층의 체력과 다를 수 있다
+  const floorHp = hpOfStage(state.stage);
+  state.monsterHp = Math.min(floorHp, state.monsterHp > 0 ? state.monsterHp : floorHp);
   // 영혼 상점 이전 세이브에는 soulsTotal이 없다. 그때는 보유량이 곧 총합이었다.
   if (typeof saved.soulsTotal !== 'number') state.soulsTotal = state.souls;
   const secs = Math.max(0, (Date.now() - state.lastSeen) / 1000);
-  const capped = Math.min(secs, OFFLINE_CAP_H * 3600);
+  const capped = Math.min(secs, offlineCapH() * 3600);   // '영혼의 꿈'으로 늘어난다
 
   // 체력 이전에 저장된 세이브는 hp 필드가 없다 → 가득 채워서 시작한다.
   // 있으면 자리 비운 동안의 재생을 적용하고 현재 상한으로 자른다.
@@ -1511,6 +1884,15 @@ function wireModal(id, openerId, onOpen) {
   addEventListener('keydown', e => { if (e.key === 'Escape' && !m.hidden) close(); });
 }
 wireModal('wshop', 'shopbtn', renderShop);
+wireModal('achshop', 'achbtn', renderAch);
+$('geartabs').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  for (const el of $('geartabs').children) el.classList.toggle('on', el === b);
+  gearTab = b.dataset.gear;
+  renderShop();
+});
+$('autofeed').onclick = () => { state.autoFeed = !state.autoFeed; };
 wireModal('upshop', 'upbtn', renderUpgrades);
 
 $('uptabs').addEventListener('click', e => {
