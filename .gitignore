@@ -1,0 +1,6 @@
+# 게임 원본은 각자 저장소가 따로 있다. 여기 폴더들은 고칠 때 받아 두는 작업용 사본이라
+# 허브 저장소에는 담지 않는다 (허브가 담는 것은 games/ 아래 사본뿐).
+/SlimeGame/
+/Nexus-Defense/
+/Money-Defense/
+/Wall-Defense/

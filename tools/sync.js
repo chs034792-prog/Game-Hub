@@ -3,18 +3,18 @@
    `node tools/sync.js` 한 번이면 허브도 최신이 된다.
 
    사용법:
-     node tools/sync.js            원본 폴더(..)에서 복사
+     node tools/sync.js            허브 안의 원본 폴더에서 복사
      node tools/sync.js --check    복사하지 않고 다른 점만 알려준다 */
 const fs = require('fs');
 const path = require('path');
 
 const HUB = path.resolve(__dirname, '..');
-const SRC_ROOT = path.resolve(HUB, '..');          // ClaudeWork — 게임 저장소들이 나란히 있다
+const SRC_ROOT = HUB;                              // 원본 저장소를 허브 폴더 안에 받아 둔다
 const GAMES = [
-  { id: 'slime', dir: 'SlimeIdle',     name: '슬라임 키우기' },
-  { id: 'nexus', dir: 'NexusDefense',  name: '넥서스 디펜스' },
-  { id: 'money', dir: 'MoneyDefense',  name: '머니 디펜스' },
-  { id: 'wall',  dir: 'WallDefense',   name: '극한 벽짓고 살아남기' },
+  { id: 'slime', dir: 'SlimeGame',     name: '슬라임 키우기' },
+  { id: 'nexus', dir: 'Nexus-Defense', name: '넥서스 디펜스' },
+  { id: 'money', dir: 'Money-Defense', name: '머니 디펜스' },
+  { id: 'wall',  dir: 'Wall-Defense',  name: '극한 벽짓고 살아남기' },
 ];
 
 const check = process.argv.includes('--check');

@@ -20,6 +20,12 @@ index.html        허브 — 게임 카드 네 장과 내 기록
 play.html         게임 실행 창 — 위에 얇은 띠(← 허브 · 전체화면 · 새 탭) + 게임 iframe
 games/*.html      각 게임 저장소 index.html 의 사본 (직접 고치지 말 것)
 tools/sync.js     사본 갱신 스크립트
+steamGame/        게임 관련 잡다한 스크립트 (좀보이드 전용서버 시작 .bat 등)
+
+SlimeGame/        ┐ 게임 원본 저장소를 받아 둔 작업용 폴더.
+Nexus-Defense/    │ 각자 자기 저장소를 가리키므로 여기서 고쳐 바로 커밋·푸쉬하면 된다.
+Money-Defense/    │ 허브 저장소에는 담기지 않는다 (.gitignore).
+Wall-Defense/     ┘ 없으면 아래 '게임 원본 받기'로 다시 받는다.
 ```
 
 - **게임 코드는 손대지 않습니다.** `games/*.html`은 원본 저장소의 `index.html`을 그대로 복사한 것이고, 허브 기능(돌아가기 버튼 등)은 전부 `play.html` 쪽에 있습니다. 그래서 원본을 고쳐도 충돌 없이 다시 복사만 하면 됩니다.
@@ -37,7 +43,20 @@ node tools/sync.js
 node tools/sync.js --check
 ```
 
-`--check`는 복사하지 않고 어떤 게임이 원본과 다른지만 알려줍니다. 원본 저장소는 이 폴더와 나란히 있다고 봅니다 (`../SlimeIdle`, `../NexusDefense`, `../MoneyDefense`, `../WallDefense`). 게임을 추가하려면 `tools/sync.js`의 `GAMES` 표에 한 줄, `index.html`의 `GAMES` 목록에 카드 하나, `play.html`의 `GAMES`에 한 줄을 넣습니다.
+`--check`는 복사하지 않고 어떤 게임이 원본과 다른지만 알려줍니다. 원본은 허브 폴더 안의 `SlimeGame/`, `Nexus-Defense/`, `Money-Defense/`, `Wall-Defense/` 에서 찾습니다. 게임을 추가하려면 `tools/sync.js`의 `GAMES` 표에 한 줄, `index.html`의 `GAMES` 목록에 카드 하나, `play.html`의 `GAMES`에 한 줄을 넣습니다.
+
+## 게임 원본 받기
+
+원본 폴더가 없을 때(새 PC이거나 지웠을 때) 허브 폴더에서:
+
+```bash
+git clone https://github.com/chs034792-prog/SlimeGame.git SlimeGame
+git clone https://github.com/chs034792-prog/Nexus-Defense.git Nexus-Defense
+git clone https://github.com/chs034792-prog/Money-Defense.git Money-Defense
+git clone https://github.com/chs034792-prog/Wall-Defense.git Wall-Defense
+```
+
+네 폴더는 각자 자기 저장소를 가리키는 **별개의 git 저장소**입니다. 그 안에서 고치고 커밋·푸쉬하면 해당 게임 저장소로 올라가고, `node tools/sync.js` 로 허브 사본까지 맞춘 뒤 허브 저장소도 따로 커밋하면 됩니다. 원본이 없어도 허브는 `games/` 아래 사본으로 그대로 돌아갑니다.
 
 ## 기록 이어쓰기
 
