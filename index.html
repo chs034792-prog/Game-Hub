@@ -368,10 +368,15 @@ const BADGES = [
   { icon: '📅', name: '오늘의 임무 올클리어', cond: todayAllMissionsDone, title: '오늘 날짜의 일일 임무를 한 게임에서 모두 완료' },
   { icon: '💎', name: '퇴직금 보유', cond: (+((md.meta || {}).points) || 0) > 0, title: '머니 디펜스 영구 재화 "퇴직금"을 보유' },
 ];
+const escAttr = (s) => String(s)
+  .replace(/&/g, '&amp;')
+  .replace(/"/g, '&quot;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;');
 $('badges').innerHTML =
   `<div class="ttl">허브 공통 뱃지</div>` +
   `<div class="badge-row">${BADGES.map(b =>
-    `<span class="badge${b.cond ? ' on' : ''}" title="${b.title}">${b.icon} ${b.name}</span>`
+    `<span class="badge${b.cond ? ' on' : ''}" title="${escAttr(b.title)}">${b.icon} ${b.name}</span>`
   ).join('')}</div>`;
 </script>
 </body>
