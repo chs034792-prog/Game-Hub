@@ -68,6 +68,41 @@
   #overlay .ach { display: flex; gap: 8px; padding: 3px 0; font-size: 13px; border-bottom: 1px solid #252d38; }
   #overlay .ach.ok { color: #ffd166; } #overlay .ach.no { color: #6b7684; }
   #log { position: absolute; left: 12px; top: 62px; font-size: 13px; z-index: 2; pointer-events: none; text-shadow: 0 1px 3px #000; }
+
+  /* ---- 일일 접속 보상 · 일일 임무 ----
+     기존 #top·#relics·#panel·#info·#mini 가 화면 가장자리를 전부 차지하고 있어서,
+     그 네 영역이 쓰지 않는 "하단 패널 바로 위" 자리에 작게 띄운다. */
+  #dailyBtn { position: fixed; right: 8px; bottom: 182px; z-index: 6;
+    width: 34px; height: 34px; padding: 0; border-radius: 50%; border: 1px solid #3c4756;
+    background: #1b222c; color: #e6e9ee; font-size: 16px; cursor: pointer; display: grid; place-items: center;
+    box-shadow: 0 4px 10px #0007; }
+  #dailyBtn:hover { border-color: #ffd166; }
+  #dailyDot { position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%;
+    background: #ff6b6b; border: 2px solid #11161d; }
+  @media (max-width: 480px) { #dailyBtn { width: 30px; height: 30px; font-size: 14px; bottom: 150px; } }
+  #dailyModal { position: absolute; inset: 0; background: rgba(0,0,0,.72); display: none; align-items: center; justify-content: center; z-index: 9; }
+  #dailyModal.open { display: flex; }
+  #dailyModal .box { position: relative; width: min(420px, 92vw); max-height: 86vh; overflow-y: auto; padding: 18px 20px;
+    background: #141920; border: 1px solid #3c4756; border-radius: 10px; }
+  #dailyModal h1 { margin: 0 0 8px; font-size: 18px; }
+  #dailyCloseBtn { position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; border-radius: 6px; border: 1px solid #3c4756;
+    background: #1b222c; color: #e6e9ee; cursor: pointer; }
+  .daily-sect { margin: 10px 0; }
+  .daily-sect > b { display: block; margin-bottom: 6px; color: #ffd166; font-size: 13px; }
+  .streakrow { display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap; }
+  .streakday { flex: 1; min-width: 34px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 5px 3px; border-radius: 8px; border: 1px solid #2f3946; background: #1b222c; font-size: 9px; color: #8592a3; text-align: center; }
+  .streakday span { font-size: 9px; } .streakday b { font-size: 11px; color: #cfd6df; }
+  .streakday.cur { border-color: #ffd166; background: #3a3420; } .streakday.cur b { color: #ffd166; }
+  .streakday.past { opacity: .5; }
+  .daily-claim { display: block; width: 100%; font-size: 13px; padding: 7px 10px; border-radius: 6px; border: 0;
+    background: #ffd166; color: #222; font-weight: bold; cursor: pointer; margin-top: 4px; }
+  .daily-claim.small { width: auto; padding: 4px 10px; font-size: 12px; margin: 0; }
+  .daily-mission { border: 1px solid #2f3946; background: #1b222c; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; font-size: 13px; }
+  .dm-top { display: flex; justify-content: space-between; gap: 8px; } .dm-top b { color: #c9a0ff; white-space: nowrap; }
+  .dm-bar { height: 6px; background: #0d0f16; border: 1px solid #2f3946; border-radius: 99px; overflow: hidden; margin: 5px 0; }
+  .dm-bar i { display: block; height: 100%; background: linear-gradient(90deg, #4a7, #6fe39a); }
+  .dm-foot { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #8592a3; }
 </style>
 </head>
 <body>
@@ -95,6 +130,14 @@
 <div id="toast"></div>
 <div id="pick"></div>
 <div id="overlay"><div class="box" id="startBox"></div></div>
+<button id="dailyBtn" aria-label="일일 보상 열기">📅<span id="dailyDot" hidden></span></button>
+<div id="dailyModal">
+  <div class="box">
+    <h1>📅 일일 보상</h1>
+    <button id="dailyCloseBtn" aria-label="닫기">✕</button>
+    <div id="dailyBody"></div>
+  </div>
+</div>
 <script>
 'use strict';
 // ═════════ 설정 ═════════
@@ -418,9 +461,119 @@ function loadMeta() {
   let m = null; try { m = JSON.parse(localStorage.getItem(META_KEY)); } catch (e) {}
   m = m || {}; m.essence = m.essence || 0; m.perks = m.perks || {}; m.ach = m.ach || {};
   m.stats = m.stats || {}; m.stats.maps20 = m.stats.maps20 || {}; m.stats.cmd20 = m.stats.cmd20 || {}; m.stats.kills = m.stats.kills || 0; m.stats.runs = m.stats.runs || 0;
+  ensureDaily(m);
   return m;
 }
 function saveMeta(m) { try { localStorage.setItem(META_KEY, JSON.stringify(m)); } catch (e) {} }
+
+// ═════════ 일일 접속 보상 · 일일 임무 (영구 저장, wallDefenseMeta.daily) ═════════
+// 로컬 날짜를 년/월/일로 직접 조합한다 (로케일 문자열 금지 — 기기·언어에 따라 달라지는 걸 막는다).
+function localDateStr(d) { d = d || new Date(); const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0'); return `${y}-${m}-${day}`; }
+function prevDateStr(s) { const [y, m, d] = s.split('-').map(Number); const dt = new Date(y, m - 1, d); dt.setDate(dt.getDate() - 1); return localDateStr(dt); }
+function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function seededRand(seed) { let a = seed >>> 0; return function () { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+// 보통 난이도 한 판(협곡, 약 67웨이브) 수급 정수가 대략 100 전후 — README "밸런스" 참고.
+// 접속 보상 1~7일차: 평균 10/일 (한 판의 1/10 수준), 7일 주기로 되돌아간다 (끊기면 1일차 리셋).
+const DAILY_LOGIN_REWARDS = [4, 5, 7, 9, 11, 14, 20];
+// 임무는 매일 범주(처치·웨이브·건설) 하나씩 정확히 3개, 난이도는 날짜 시드로 고른다.
+// 업적(ACH)의 장기 목표(웨이브 25/50/75, 5,000처치 등)보다 훨씬 낮게 잡아 "짧은 호흡"으로 설계했다.
+const DAILY_MISSION_POOL = {
+  kill:  [{ n: 30, r: 6 }, { n: 50, r: 8 }, { n: 80, r: 10 }],
+  wave:  [{ n: 8,  r: 6 }, { n: 12, r: 8 }, { n: 16, r: 10 }],
+  build: [{ n: 3,  r: 6 }, { n: 5,  r: 8 }, { n: 8,  r: 10 }],
+};
+function missionLabel(mi) {
+  if (mi.type === 'kill') return `적 ${mi.target}마리 처치`;
+  if (mi.type === 'wave') return `웨이브 ${mi.target} 도달`;
+  return `건물 건설·업그레이드 ${mi.target}회`;
+}
+function genDailyMissions(dateStr) {
+  const rnd = seededRand(hashStr('wd-daily-' + dateStr));
+  return ['kill', 'wave', 'build'].map(type => {
+    const pool = DAILY_MISSION_POOL[type], pick = pool[Math.floor(rnd() * pool.length)];
+    return { type, target: pick.n, reward: pick.r };
+  });
+}
+// 저장된 meta 에 오늘 날짜의 daily 블록이 없으면(최초 실행·자정 경과) 새로 만든다. 끊기면 streak 은 1로 되돌아간다.
+function ensureDaily(meta) {
+  const today = localDateStr();
+  if (!meta.daily || meta.daily.day !== today) {
+    const prevDay = meta.daily && meta.daily.day;
+    const streak = prevDay && prevDateStr(today) === prevDay ? (meta.daily.streak || 0) + 1 : 1;
+    meta.daily = { day: today, streak, loginClaimed: false, missions: genDailyMissions(today), progress: { kill: 0, wave: 0, build: 0 }, claimed: [false, false, false] };
+  }
+  return meta.daily;
+}
+function claimDailyLogin() {
+  const m = loadMeta(), d = m.daily;
+  if (d.loginClaimed) return;
+  const reward = DAILY_LOGIN_REWARDS[(d.streak - 1) % DAILY_LOGIN_REWARDS.length];
+  m.essence += reward; d.loginClaimed = true; saveMeta(m);
+  toast(`📅 접속 보상 +${reward} 정수 (연속 ${d.streak}일째)`);
+  renderDaily(); updateDailyDot();
+}
+function claimDailyMission(i) {
+  const m = loadMeta(), d = m.daily, mi = d.missions[i];
+  if (!mi || d.claimed[i] || (d.progress[mi.type] || 0) < mi.target) return;
+  m.essence += mi.reward; d.claimed[i] = true; saveMeta(m);
+  toast(`📅 일일 임무 완료! +${mi.reward} 정수`);
+  renderDaily(); updateDailyDot();
+}
+// 판 진행 중 3초마다(checkAch 와 같은 주기) + 웨이브 시작 + 판 종료 시 호출해 오늘 진행도를 누적한다.
+// S.kills·S.buildCount 는 이번 판 누적값이라, "이미 반영한 만큼"(dailyCreditedKill/Build)과의 차이만 더한다.
+function checkDaily() {
+  if (!S) return;
+  const m = loadMeta(), d = m.daily;
+  if (S.dailyDay !== d.day) { S.dailyDay = d.day; S.dailyCreditedKill = S.kills; S.dailyCreditedBuild = S.buildCount; }
+  let changed = false;
+  const addKill = S.kills - S.dailyCreditedKill;
+  if (addKill > 0) { d.progress.kill += addKill; S.dailyCreditedKill = S.kills; changed = true; }
+  const addBuild = S.buildCount - S.dailyCreditedBuild;
+  if (addBuild > 0) { d.progress.build += addBuild; S.dailyCreditedBuild = S.buildCount; changed = true; }
+  if (S.wave > d.progress.wave) { d.progress.wave = S.wave; changed = true; }
+  if (changed) saveMeta(m);
+  if (document.getElementById('dailyModal').classList.contains('open')) renderDaily();
+  updateDailyDot();
+}
+function updateDailyDot() {
+  const dot = document.getElementById('dailyDot'); if (!dot) return;
+  const m = loadMeta(), d = m.daily;
+  const missionReady = d.missions.some((mi, i) => !d.claimed[i] && (d.progress[mi.type] || 0) >= mi.target);
+  dot.hidden = !(!d.loginClaimed || missionReady);
+}
+function renderDaily() {
+  const box = document.getElementById('dailyBody'); if (!box) return;
+  const m = loadMeta(), d = m.daily;
+  const curIdx = ((d.streak - 1) % 7) + 1;
+  const streakRow = DAILY_LOGIN_REWARDS.map((r, i) => {
+    const dayNum = i + 1;
+    return `<div class="streakday ${dayNum === curIdx ? 'cur' : ''} ${dayNum < curIdx ? 'past' : ''}"><span>${dayNum}일차</span><b>+${r}</b></div>`;
+  }).join('');
+  const loginPart = d.loginClaimed
+    ? `<div class="rec">오늘 접속 보상 수령 완료 (연속 ${d.streak}일째)</div>`
+    : `<button class="daily-claim" data-act="claimLogin">오늘 접속 보상 받기 — 연속 ${d.streak}일째 (+${DAILY_LOGIN_REWARDS[curIdx - 1]} 정수)</button>`;
+  const missionsHtml = d.missions.map((mi, i) => {
+    const prog = Math.min(mi.target, d.progress[mi.type] || 0), pct = Math.round(prog / mi.target * 100), done = prog >= mi.target;
+    return `<div class="daily-mission">
+      <div class="dm-top"><span>${missionLabel(mi)}</span><b>+${mi.reward} 정수</b></div>
+      <div class="dm-bar"><i style="width:${pct}%"></i></div>
+      <div class="dm-foot"><span>${prog} / ${mi.target}</span>${done ? (d.claimed[i] ? '<span>✔ 받음</span>' : `<button class="daily-claim small" data-act="claimMission" data-i="${i}">받기</button>`) : '<span>진행중</span>'}</div>
+    </div>`;
+  }).join('');
+  box.innerHTML = `<div class="daily-sect"><b>접속 보상 (7일 주기, 끊기면 1일차로)</b><div class="streakrow">${streakRow}</div>${loginPart}</div>` +
+    `<div class="daily-sect"><b>오늘의 임무 3개 (자정에 새로 정해짐)</b>${missionsHtml}</div>` +
+    `<div class="rec">보유 사이오닉 정수: <b style="color:#c9a0ff">${m.essence}</b></div>`;
+}
+let dailyWasPaused = false;
+function openDaily() {
+  renderDaily(); document.getElementById('dailyModal').classList.add('open');
+  if (S && !S.over) { dailyWasPaused = S.paused; S.paused = true; }
+  updateDailyDot();
+}
+function closeDaily() {
+  document.getElementById('dailyModal').classList.remove('open');
+  if (S && !S.over && !dailyWasPaused) S.paused = false;
+}
 
 // ═════════ 상태 ═════════
 let S;
@@ -446,6 +599,7 @@ function newGame(diff, mapId = 'canyon', endless = false, commander = null, muta
     sel: null, sellMode: false, targeting: null, selB: null, selU: [], tab: 'build', autoRepair: true,
     chronoT: 0, overT: 0, rampCd: 0, time: 0,
     paused: false, over: false, speed: 1, kills: 0, killsBy: {}, field: new Float64Array(W * H), fieldT: 0,
+    buildCount: 0, dailyDay: null, dailyCreditedKill: 0, dailyCreditedBuild: 0,
   };
   for (const k in UPS) S.up[k] = 0;
   for (const k in ABIL) S.cd[k] = 0;
@@ -608,6 +762,7 @@ function place(tx, ty) {
   if (d.max && count(type) >= maxOf(type)) { log(`${d.name}은(는) ${maxOf(type)}개까지입니다`, '#ff9b9b'); return false; }
   if (!canPlace(type, tx, ty)) return false;
   if (!pay(costOf(type))) return false;
+  S.buildCount++;
   if (type === 'mine') { S.mines.push({ x: tx, y: ty }); return true; }
   addBld(type, tx, ty, d.size || 1);
   if (type === 'pylon' || type === 'refinery' || d.max) buildUI();
@@ -636,6 +791,7 @@ function upgradeBld(b) {
   const c = tierCost(b);
   if (c.need && !S.tech[c.need]) { log(`3단계 강화에는 ${TECH[c.need].name}이(가) 필요합니다`, '#ff9b9b'); return; }
   if (!pay(c)) return;
+  S.buildCount++;
   const k = b.hp / b.maxhp; b.tier = (b.tier || 1) + 1; b.maxhp = bldMaxHp(b.type, b.tier); b.hp = b.maxhp * Math.max(k, .5);
   log(`${d.name} ${b.tier}단계`, '#7fd3ff');
   S.fx.push({ kind: 'ring', x: b.x + .5, y: b.y + .5, t: .5, r: 1.2, c: '#ffd166' });
@@ -932,6 +1088,7 @@ function startWave() {
   if (w === 5) offerRelics('5웨이브 돌파');
   eventFor(w + 1);
   checkAch();
+  checkDaily();
   saveGame();
 }
 
@@ -1124,7 +1281,7 @@ function update(dt) {
   updateUnits(dt);
   updateEffects(dt); if (S.over) return;
   S.mons = S.mons.filter(m => !m.dead);
-  S.achT -= dt; if (S.achT <= 0) { S.achT = 3; checkAch(); }
+  S.achT -= dt; if (S.achT <= 0) { S.achT = 3; checkAch(); checkDaily(); }
 }
 function updateEconomy(dt) {
   S.incT -= dt * (S.chronoT > 0 ? 2 : 1);
@@ -2117,6 +2274,7 @@ mini.addEventListener('mousedown', e => {
   cam.lock = false; cam.x = wx * T - cv.width / 2; cam.y = wy * T - (cv.height - BOTTOM) / 2;
 });
 addEventListener('keydown', e => {
+  if (document.getElementById('dailyModal').classList.contains('open')) { if (e.key === 'Escape') closeDaily(); return; }
   if (!S || S.over) return;
   if (S.pick) { const n = +e.key; if (n >= 1 && n <= S.pick.opts.length) chooseRelic(S.pick.opts[n - 1]); return; }
   const k = e.key.toLowerCase(); keys[e.key] = true;
@@ -2143,7 +2301,8 @@ addEventListener('resize', resize);
 const SAVE_FIELDS = ['min', 'gas', 'incT', 'workers', 'wave', 'waveT', 'spawnQ', 'waveClock', 'mines', 'rally', 'tech', 'cd', 'nestOpen',
   'heroDead', 'heroOwned', 'heroLv', 'relics', 'pick', 'angelUsed', 'mineKills', 'nydusUnder', 'nexusHit',
   'kills', 'killsBy', 'autoRepair', 'event', 'eventPlan', 'time', 'chronoT', 'overT', 'rampCd', 'metaP',
-  'crates', 'cratesGot', 'objective', 'objCleared', 'dmgBy', 'buffT'];
+  'crates', 'cratesGot', 'objective', 'objCleared', 'dmgBy', 'buffT',
+  'buildCount', 'dailyDay', 'dailyCreditedKill', 'dailyCreditedBuild'];
 function saveGame() {
   try {
     const o = { v: 4, diff: S.diff, map: S.map, endless: S.endless, commander: S.commander, mutators: S.mutators, up: S.up };
@@ -2236,11 +2395,19 @@ document.getElementById('startBox').addEventListener('click', e => {
   else if (a === 'goEndless') { document.getElementById('overlay').style.display = 'none'; S.over = false; S.endless = true; S.won = false; S.waveT = 5; banner('무한 모드', '100웨이브 이후에도 적이 계속 강해집니다'); return; }
   renderMenu();
 });
+document.getElementById('dailyBtn').addEventListener('click', openDaily);
+document.getElementById('dailyCloseBtn').addEventListener('click', closeDaily);
+document.getElementById('dailyModal').addEventListener('click', e => { if (e.target.id === 'dailyModal') closeDaily(); });
+document.getElementById('dailyBody').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  if (b.dataset.act === 'claimLogin') claimDailyLogin();
+  else if (b.dataset.act === 'claimMission') claimDailyMission(+b.dataset.i);
+});
 
 // ═════════ 승패·시작 ═════════
 function gameOver(win) {
   if (S.over) return;
-  S.over = true; checkAch(); clearSave(); saveRecord(win);
+  S.over = true; checkAch(); checkDaily(); clearSave(); saveRecord(win);
   const meta = loadMeta();
   const gain = Math.floor((Math.floor(S.wave * D().essence) + 5 * (S.killsBy.boss || 0) + 3 * S.objCleared + (win ? 100 : 0)) * (1 + mutBonus(S.mutators)));
   meta.essence += gain; meta.stats.kills += S.kills; meta.stats.runs++; saveMeta(meta);
@@ -2281,6 +2448,7 @@ function start(resume, diff, mapId, endless, cmd, muts) {
   if (d) applySave(d); else newGame(diff || 'normal', mapId || 'canyon', !!endless, cmd || null, muts || []);
 }
 renderMenu();
+updateDailyDot();
 resize();
 requestAnimationFrame(loop);
 </script>
