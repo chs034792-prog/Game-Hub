@@ -2305,6 +2305,12 @@ function importSave(code) {
   save.daily = normDaily(d.daily);
   save.mig = Math.max(0, +d.mig || 0);
   migrate();
+  // loadSave() 의 신규/기존 판정은 백업 코드를 불러오기 전에 끝나 있어서,
+  // 세이브가 전혀 없던 기기에서 베테랑(runs·best > 0) 백업을 처음 복원하면
+  // save.tutorial 이 신규용 기본값으로 남는다. 복원된 값으로 다시 판정한다.
+  if ((save.runs > 0 || save.best > 0)) {
+    save.tutorial = { step: TUTORIAL_STEPS.length, done: true };
+  }
   realCores = save.cores;          // 불러온 값이 운영자 모드에 덮이지 않게 한다
   writeSave();
 }
