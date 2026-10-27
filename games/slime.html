@@ -411,6 +411,17 @@
   .stat .k { font-size: 11px; color: var(--muted); }
   .stat .v { font-size: 17px; font-weight: 700; margin-top: 2px; font-variant-numeric: tabular-nums; }
 
+  /* ---- 다음 목표 패널 ----
+     보상 없는 안내용 문구 2개. 모바일에서 줄바꿈은 되지만 가로로 넘치면 안 된다. */
+  .goals { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .goal {
+    flex: 1 1 220px; min-width: 0;
+    background: var(--panel-hi); border: 1px solid var(--line); border-radius: 10px;
+    padding: 8px 12px; font-size: 12px; line-height: 1.4; color: var(--text);
+    overflow-wrap: break-word;
+  }
+  .goal.full { flex: 1 1 100%; text-align: center; font-weight: 700; color: var(--accent); }
+
   .bar { height: 8px; background: #0d0f16; border-radius: 99px; overflow: hidden; border: 1px solid var(--line); }
   .bar > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); transition: width 160ms; }
   .barrow { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin: 12px 0 5px; font-variant-numeric: tabular-nums; }
@@ -602,6 +613,25 @@
   .ach .a-desc { font-size: 11px; color: var(--muted); }
   .ach .a-rew { font-size: 11px; font-weight: 700; color: var(--gold); white-space: nowrap; }
 
+  /* ---- 몬스터 도감 ---- */
+  .dexlist { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+  .dex {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 11px; border-radius: 10px;
+    border: 1px solid var(--line); background: #1b1f2b;
+  }
+  .dex.seen { border-color: var(--accent-dim); background: #1f2a25; }
+  .dex .d-ico { font-size: 18px; flex: none; opacity: .35; }
+  .dex.seen .d-ico { opacity: 1; }
+  .dex .d-main { flex: 1; display: flex; flex-direction: column; gap: 3px; text-align: left; min-width: 0; }
+  .dex .d-name { font-size: 13px; font-weight: 700; }
+  .dex.seen .d-name { color: var(--accent); }
+  .dex .d-desc { font-size: 11px; color: var(--muted); }
+  .dex .d-pips { display: flex; gap: 2px; }
+  .dex .d-pip { width: 9px; height: 9px; border-radius: 50%; background: #2c3145; border: 1px solid var(--line); }
+  .dex .d-pip.on { background: var(--accent); border-color: var(--accent); }
+  .dex .d-kills { font-size: 11px; font-weight: 700; color: var(--gold); white-space: nowrap; flex: none; text-align: right; }
+
   /* ---- 보스 층 ---- */
   .floor.boss { color: #ffbdbd; border-color: #a34848; background: #2a1414; }
   .ename.boss { color: #ffbdbd; }
@@ -716,10 +746,14 @@
       <div class="stat"><div class="k">무기</div><div class="v sm" id="s-weapon">맨손</div></div>
     </div>
 
+    <!-- "다음 목표" 패널 — 진행도가 가장 높은 목표 2개만 보여 준다. 보상은 없다, 안내용. -->
+    <div class="goals" id="goals"></div>
+
     <div class="shoprow">
       <button class="shoplink" id="upbtn" aria-label="강화 열기">🔧 강화</button>
       <button class="shoplink" id="shopbtn" aria-label="장비상점 열기">⚔️ 장비</button>
       <button class="shoplink" id="achbtn" aria-label="업적 열기">🏆 업적</button>
+      <button class="shoplink" id="dexbtn" aria-label="도감 열기">📖 도감</button>
       <button class="rebirth" id="rebirth">환생</button>
     </div>
 
@@ -845,6 +879,19 @@
     <p class="note" id="achsum"></p>
     <div class="achlist" id="achlist"></div>
     <p class="note">업적은 <b>환생해도 사라지지 않습니다.</b> 하나 달성할 때마다 모든 수치가 1%씩 오릅니다.</p>
+  </div>
+</div>
+
+<div class="modal" id="dexshop" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dexshop-title">
+    <div class="sheethead">
+      <h2 id="dexshop-title">📖 몬스터 도감</h2>
+      <button class="iconbtn" id="dexshop-close" aria-label="닫기">✕</button>
+    </div>
+    <p class="note" id="dexsum"></p>
+    <div class="dexlist" id="dexlist"></div>
+    <p class="note">도감은 <b>환생해도 사라지지 않습니다.</b> 처음 잡거나 누적 10·50·200마리를 채우면
+      젤리(또는 영혼)를 조금 줍니다.</p>
   </div>
 </div>
 
@@ -990,24 +1037,42 @@ const SKILLS = [
 /* 업적 — 영구적이다(환생해도 남는다). 하나 달성할 때마다 모든 수치가 1%씩 오르고,
    영혼도 조금 준다. 장기 목표이자 "뭘 더 해볼까"의 목록 역할을 한다. */
 const ACHIEVEMENTS = [
-  { id: 'kill10',   name: '첫 사냥',     desc: '몬스터 10마리 처치',   soul: 1, test: () => state.lt.kills >= 10 },
-  { id: 'kill200',  name: '사냥꾼',      desc: '몬스터 200마리 처치',  soul: 2, test: () => state.lt.kills >= 200 },
-  { id: 'kill5k',   name: '학살자',      desc: '몬스터 5,000마리 처치', soul: 5, test: () => state.lt.kills >= 5000 },
-  { id: 'kill50k',  name: '재앙',        desc: '몬스터 50,000마리 처치', soul: 12, test: () => state.lt.kills >= 50000 },
-  { id: 'boss1',    name: '첫 보스',     desc: '보스 1마리 처치',      soul: 2, test: () => state.lt.bossKills >= 1 },
-  { id: 'boss25',   name: '보스 사냥꾼', desc: '보스 25마리 처치',     soul: 5, test: () => state.lt.bossKills >= 25 },
-  { id: 'boss200',  name: '왕을 먹는 자', desc: '보스 200마리 처치',   soul: 15, test: () => state.lt.bossKills >= 200 },
-  { id: 'stage25',  name: '지하 25층',   desc: '25층 도달',            soul: 1, test: () => state.lt.maxStage >= 25 },
-  { id: 'stage100', name: '지하 100층',  desc: '100층 도달',           soul: 3, test: () => state.lt.maxStage >= 100 },
-  { id: 'stage500', name: '심연',        desc: '500층 도달',           soul: 8, test: () => state.lt.maxStage >= 500 },
-  { id: 'stage2k',  name: '바닥 없는 굴', desc: '2,000층 도달',        soul: 20, test: () => state.lt.maxStage >= 2000 },
-  { id: 'lv50',     name: '무럭무럭',    desc: '레벨 50 달성',         soul: 1, test: () => state.level >= 50 },
-  { id: 'lv200',    name: '거대 슬라임', desc: '레벨 200 달성',        soul: 4, test: () => state.level >= 200 },
-  { id: 'lv1000',   name: '슬라임 군주', desc: '레벨 1,000 달성',      soul: 15, test: () => state.level >= 1000 },
-  { id: 'reb1',     name: '다시 태어나다', desc: '환생 1회',           soul: 2, test: () => state.lt.rebirths >= 1 },
-  { id: 'reb10',    name: '윤회',        desc: '환생 10회',            soul: 10, test: () => state.lt.rebirths >= 10 },
-  { id: 'click1k',  name: '손맛',        desc: '1,000번 때리기',       soul: 1, test: () => state.lt.clicks >= 1000 },
-  { id: 'click20k', name: '쇠주먹',      desc: '20,000번 때리기',      soul: 6, test: () => state.lt.clicks >= 20000 },
+  { id: 'kill10',   name: '첫 사냥',     desc: '몬스터 10마리 처치',   soul: 1, test: () => state.lt.kills >= 10,
+    target: 10, cur: () => state.lt.kills },
+  { id: 'kill200',  name: '사냥꾼',      desc: '몬스터 200마리 처치',  soul: 2, test: () => state.lt.kills >= 200,
+    target: 200, cur: () => state.lt.kills },
+  { id: 'kill5k',   name: '학살자',      desc: '몬스터 5,000마리 처치', soul: 5, test: () => state.lt.kills >= 5000,
+    target: 5000, cur: () => state.lt.kills },
+  { id: 'kill50k',  name: '재앙',        desc: '몬스터 50,000마리 처치', soul: 12, test: () => state.lt.kills >= 50000,
+    target: 50000, cur: () => state.lt.kills },
+  { id: 'boss1',    name: '첫 보스',     desc: '보스 1마리 처치',      soul: 2, test: () => state.lt.bossKills >= 1,
+    target: 1, cur: () => state.lt.bossKills },
+  { id: 'boss25',   name: '보스 사냥꾼', desc: '보스 25마리 처치',     soul: 5, test: () => state.lt.bossKills >= 25,
+    target: 25, cur: () => state.lt.bossKills },
+  { id: 'boss200',  name: '왕을 먹는 자', desc: '보스 200마리 처치',   soul: 15, test: () => state.lt.bossKills >= 200,
+    target: 200, cur: () => state.lt.bossKills },
+  { id: 'stage25',  name: '지하 25층',   desc: '25층 도달',            soul: 1, test: () => state.lt.maxStage >= 25,
+    target: 25, cur: () => state.lt.maxStage },
+  { id: 'stage100', name: '지하 100층',  desc: '100층 도달',           soul: 3, test: () => state.lt.maxStage >= 100,
+    target: 100, cur: () => state.lt.maxStage },
+  { id: 'stage500', name: '심연',        desc: '500층 도달',           soul: 8, test: () => state.lt.maxStage >= 500,
+    target: 500, cur: () => state.lt.maxStage },
+  { id: 'stage2k',  name: '바닥 없는 굴', desc: '2,000층 도달',        soul: 20, test: () => state.lt.maxStage >= 2000,
+    target: 2000, cur: () => state.lt.maxStage },
+  { id: 'lv50',     name: '무럭무럭',    desc: '레벨 50 달성',         soul: 1, test: () => state.level >= 50,
+    target: 50, cur: () => state.level },
+  { id: 'lv200',    name: '거대 슬라임', desc: '레벨 200 달성',        soul: 4, test: () => state.level >= 200,
+    target: 200, cur: () => state.level },
+  { id: 'lv1000',   name: '슬라임 군주', desc: '레벨 1,000 달성',      soul: 15, test: () => state.level >= 1000,
+    target: 1000, cur: () => state.level },
+  { id: 'reb1',     name: '다시 태어나다', desc: '환생 1회',           soul: 2, test: () => state.lt.rebirths >= 1,
+    target: 1, cur: () => state.lt.rebirths },
+  { id: 'reb10',    name: '윤회',        desc: '환생 10회',            soul: 10, test: () => state.lt.rebirths >= 10,
+    target: 10, cur: () => state.lt.rebirths },
+  { id: 'click1k',  name: '손맛',        desc: '1,000번 때리기',       soul: 1, test: () => state.lt.clicks >= 1000,
+    target: 1000, cur: () => state.lt.clicks },
+  { id: 'click20k', name: '쇠주먹',      desc: '20,000번 때리기',      soul: 6, test: () => state.lt.clicks >= 20000,
+    target: 20000, cur: () => state.lt.clicks },
   { id: 'gearfull', name: '완전 무장',   desc: '무기·방어구·장신구를 모두 장착', soul: 3,
     test: () => state.equipped && state.equippedArmor && state.equippedTrinket },
   { id: 'weapall',  name: '수집가',      desc: '무기 전부 수집 (한 판 안에서)', soul: 25,
@@ -1020,36 +1085,36 @@ const ACHIEVEMENTS = [
 // 오히려 줄어들어서, 깊이 내려갈수록 가난해지는 이상한 곡선이 된다.
 // 30층까지의 몬스터. 31층부터는 앞머리에 등급 수식어를 붙이며 다시 돈다.
 const MONSTERS = [
-  { name: '들쥐',      icon: '🐀' },
-  { name: '박쥐',      icon: '🦇' },
-  { name: '독거미',    icon: '🕷️' },
-  { name: '독버섯',    icon: '🍄' },
-  { name: '고블린',    icon: '👺' },
-  { name: '들개',      icon: '🐺' },
-  { name: '멧돼지',    icon: '🐗' },
-  { name: '산적',      icon: '🥷' },
-  { name: '전갈',      icon: '🦂' },
-  { name: '바위 골렘', icon: '🗿' },
-  { name: '독사',      icon: '🐍' },
-  { name: '식인 상어', icon: '🦈' },
-  { name: '미라',      icon: '🧟' },
-  { name: '늪지 마녀', icon: '🧙' },
-  { name: '원귀',      icon: '👻' },
-  { name: '와이번',    icon: '🐉' },
-  { name: '오우거',    icon: '👹' },
-  { name: '크라켄',    icon: '🐙' },
-  { name: '리치',      icon: '💀' },
-  { name: '마왕',      icon: '😈' },
-  { name: '불개미',    icon: '🐜' },
-  { name: '얼음 늑대', icon: '🐕' },
-  { name: '해골 기사', icon: '🏴' },
-  { name: '수정 거인', icon: '💠' },
-  { name: '그림자',    icon: '🌑' },
-  { name: '화염 정령', icon: '🔥' },
-  { name: '심해 고래', icon: '🐋' },
-  { name: '천둥새',    icon: '🦅' },
-  { name: '공허 벌레', icon: '🦟' },
-  { name: '별의 수호자', icon: '🌟' },
+  { name: '들쥐',      icon: '🐀', desc: '곳간을 몰래 축내는 작은 말썽꾼' },
+  { name: '박쥐',      icon: '🦇', desc: '어둠 속에서 푸드덕 날아드는 장난꾸러기' },
+  { name: '독거미',    icon: '🕷️', desc: '거미줄 뒤에 숨어 독침을 노리는 녀석' },
+  { name: '독버섯',    icon: '🍄', desc: '포자를 뿜으며 둥실둥실 떠다니는 버섯' },
+  { name: '고블린',    icon: '👺', desc: '몽둥이 들고 떼로 몰려다니는 말썽꾼' },
+  { name: '들개',      icon: '🐺', desc: '으르렁대며 무리 지어 달려드는 사냥꾼' },
+  { name: '멧돼지',    icon: '🐗', desc: '힘만 믿고 무작정 돌진하는 멧돼지' },
+  { name: '산적',      icon: '🥷', desc: '길목을 지키며 통행료를 뜯는 산적' },
+  { name: '전갈',      icon: '🦂', desc: '꼬리 끝 독침을 숨기고 기다리는 복병' },
+  { name: '바위 골렘', icon: '🗿', desc: '느리지만 단단한 몸으로 버티는 돌덩이' },
+  { name: '독사',      icon: '🐍', desc: '풀숲에 숨어 조용히 기회를 노리는 독사' },
+  { name: '식인 상어', icon: '🦈', desc: '날카로운 이빨로 먹잇감을 쫓는 포식자' },
+  { name: '미라',      icon: '🧟', desc: '붕대 아래 썩지 않는 저주를 품은 자' },
+  { name: '늪지 마녀', icon: '🧙', desc: '늪 안개 속에서 저주를 거는 마녀' },
+  { name: '원귀',      icon: '👻', desc: '풀지 못한 원한을 끌고 떠도는 혼령' },
+  { name: '와이번',    icon: '🐉', desc: '날개로 하늘을 가르는 작은 용' },
+  { name: '오우거',    icon: '👹', desc: '거대한 몸으로 모든 걸 짓뭉개는 괴물' },
+  { name: '크라켄',    icon: '🐙', desc: '거대한 촉수로 바다를 휘젓는 괴물' },
+  { name: '리치',      icon: '💀', desc: '죽음을 다스리며 뼈의 군대를 부리는 자' },
+  { name: '마왕',      icon: '😈', desc: '어둠의 힘을 다스리는 지하세계의 군주' },
+  { name: '불개미',    icon: '🐜', desc: '뜨거운 턱으로 끝없이 몰려드는 불개미' },
+  { name: '얼음 늑대', icon: '🐕', desc: '살을 에는 냉기를 두르고 울부짖는 늑대' },
+  { name: '해골 기사', icon: '🏴', desc: '녹슨 갑주를 입고 영원히 싸우는 기사' },
+  { name: '수정 거인', icon: '💠', desc: '수정 몸으로 빛을 뿜어내는 거인' },
+  { name: '그림자',    icon: '🌑', desc: '빛이 닿지 않는 틈에서 스며드는 그림자' },
+  { name: '화염 정령', icon: '🔥', desc: '타오르는 불꽃 그 자체로 변한 정령' },
+  { name: '심해 고래', icon: '🐋', desc: '깊은 바다의 압력을 품고 떠오른 고래' },
+  { name: '천둥새',    icon: '🦅', desc: '날개를 펼칠 때마다 번개를 부르는 새' },
+  { name: '공허 벌레', icon: '🦟', desc: '아무것도 없는 틈에서 기어나온 존재' },
+  { name: '별의 수호자', icon: '🌟', desc: '별빛으로 이 층을 지키는 마지막 수호자' },
 ];
 const TIERS = ['', '강화된 ', '흉포한 ', '심연의 ', '전설의 ', '태고의 ', '멸망의 ', '별을 삼킨 '];
 
@@ -1183,6 +1248,9 @@ function freshState() {
        업적은 영구 보상이고, lt(lifetime)는 그 업적의 판정 근거다. */
     ach: {},
     lt: { kills: 0, bossKills: 0, clicks: 0, maxStage: 1, rebirths: 0 },
+    // 몬스터 도감 기록. 환생해도 지워지지 않는다(rebirth 참고).
+    // 키는 종 번호(0~29), 값은 { kills, tiers(비트마스크) }.
+    dex: {},
     lastSeen: Date.now(),
     daily: freshDaily(),
   };
@@ -1368,6 +1436,39 @@ function checkAch() {
   }
 }
 
+/* 몬스터 도감 — 종(0~29) x 등급(0~7) = 240칸의 처치 기록.
+   보상은 전부 고정값이다(일일 임무·업적 보상과 같은 이유로 레벨·영혼 배율을 걸지 않는다).
+   종 하나를 평생 처음 잡았을 때 1회, 누적 10/50/200마리째에 한 번씩만 준다. */
+const DEX_TOTAL = MONSTERS.length * TIERS.length;   // 30종 x 8등급 = 240칸
+function dexEntry(speciesIdx) {
+  if (!state.dex[speciesIdx]) state.dex[speciesIdx] = { kills: 0, tiers: 0 };
+  return state.dex[speciesIdx];
+}
+// 최소 1번 잡아본 종x등급 칸 수 (완성률 분자)
+function dexCellsFilled() {
+  let n = 0;
+  for (const idx in state.dex) {
+    const tiers = state.dex[idx].tiers;
+    for (let t = 0; t < TIERS.length; t++) if (tiers & (1 << t)) n++;
+  }
+  return n;
+}
+function dexRecord(speciesIdx, tierIdx) {
+  const e = dexEntry(speciesIdx);
+  const firstEver = e.kills === 0;
+  e.kills++;
+  e.tiers |= (1 << tierIdx);
+  const mon = MONSTERS[speciesIdx];
+  if (firstEver) {
+    state.jelly += 30;
+    note(`📖 ${mon.icon} ${mon.name} 최초 발견! 도감에 기록되었습니다 (젤리 +30)`);
+  }
+  if (e.kills === 10)  { state.jelly += 80;  note(`📖 ${mon.icon} ${mon.name} 10마리 처치! 젤리 +80`); }
+  if (e.kills === 50)  { state.jelly += 200; note(`📖 ${mon.icon} ${mon.name} 50마리 처치! 젤리 +200`); }
+  if (e.kills === 200) { state.souls += 1; state.soulsTotal += 1;
+    note(`📖 ${mon.icon} ${mon.name} 200마리 처치! 영혼 +1`); }
+}
+
 /* 액티브 스킬 — 쿨다운과 지속 시간을 초 단위로 센다. */
 function tickSkills(dt) {
   for (const k of SKILLS) {
@@ -1410,6 +1511,7 @@ function damageMonster(amount) {
   state.jelly += rewardOfStage(st) * killJellyMult();
   gainExp(expOfStage(st) * expMult());
   state.lt.kills++;
+  dexRecord((st - 1) % MONSTERS.length, tierOfStage(st));   // 도감 기록
   dailyAddProgress('kill');   // 보스도 몬스터이므로 처치 임무에 같이 센다
   if (boss) {
     state.lt.bossKills++;
@@ -1505,13 +1607,13 @@ function buySoul(u) {
 function rebirth() {
   if (state.level < REBIRTH_LEVEL) return;
   const gained = soulGain();
-  // 영혼 강화·업적·평생 기록만 판을 넘어 살아남는다. 장비는 초기화 — 매 판 다시 산다.
-  const { soulUp, ach, lt, autoFeed } = state;
+  // 영혼 강화·업적·평생 기록·도감만 판을 넘어 살아남는다. 장비는 초기화 — 매 판 다시 산다.
+  const { soulUp, ach, lt, dex, autoFeed } = state;
   const souls = state.souls + gained;
   const soulsTotal = state.soulsTotal + gained;
   lt.rebirths++;
   state = freshState();
-  Object.assign(state, { souls, soulsTotal, soulUp, ach, lt, autoFeed });
+  Object.assign(state, { souls, soulsTotal, soulUp, ach, lt, dex, autoFeed });
   state.hp = slimeMaxHp();
   stunLeft = 0;
   startFloor();
@@ -1650,6 +1752,107 @@ function renderAch() {
   }).join('');
 }
 
+/* ============================================================
+   "다음 목표" 패널 — 보상 없는 안내 문구. 5가지 후보를 매번 계산해
+   진행도(0~1)가 가장 높은(=가장 가까운) 2개만 보여준다.
+   ============================================================ */
+// 1. 다음 장비 해금 — 무기/방어구/장신구 중 아직 없는 것 중 요구 레벨이 가장 낮은 것
+function nextGearGoal() {
+  const pools = [
+    { list: WEAPONS,  own: state.weapons },
+    { list: ARMORS,   own: state.armors },
+    { list: TRINKETS, own: state.trinkets },
+  ];
+  let best = null;
+  for (const p of pools) {
+    for (const g of p.list) {
+      if (p.own.includes(g.id)) continue;
+      if (!best || g.level < best.level) best = g;
+    }
+  }
+  if (!best) return null;
+  const remain = Math.max(0, best.level - state.level);
+  const progress = Math.min(1, state.level / best.level);
+  const tail = remain > 0 ? `, ${remain} 남음` : ', 구매 가능';
+  return { progress, text: `🎯 다음 장비: ${best.icon} ${best.name} (Lv.${best.level}${tail})` };
+}
+
+// 2. 다음 스킬 해금 레벨
+function nextSkillGoal() {
+  const next = SKILLS.filter(s => s.level > state.level).sort((a, b) => a.level - b.level)[0];
+  if (!next) return null;
+  const remain = next.level - state.level;
+  const progress = Math.min(1, state.level / next.level);
+  return { progress, text: `🎯 다음 스킬: ${next.icon} ${next.name} (Lv.${next.level}, ${remain} 남음)` };
+}
+
+// 3. 가장 가까운 업적 — target/cur가 있는 것만 후보로 삼는다
+function nearestAchGoal() {
+  let best = null;
+  for (const a of ACHIEVEMENTS) {
+    if (state.ach[a.id]) continue;
+    if (typeof a.target !== 'number') continue;
+    let cur = 0;
+    try { cur = a.cur(); } catch (e) {}
+    const progress = Math.min(1, cur / a.target);
+    if (!best || progress > best.progress) best = { progress, a, cur };
+  }
+  if (!best) return null;
+  const remain = Math.max(0, best.a.target - best.cur);
+  return { progress: best.progress, text: `🎯 다음 업적: ${best.a.name} (${fmt(remain)} 남음)` };
+}
+
+// 4. 다음 보스 층 — BOSS_EVERY 기준. 지금 보스 층이면 진행 중 취지로 progress=1
+function nextBossGoal() {
+  if (isBoss(state.stage)) return { progress: 1, text: `🎯 ${state.stage}층 보스전 진행 중!` };
+  const remain = BOSS_EVERY - (state.stage % BOSS_EVERY);
+  const nextFloor = state.stage + remain;
+  const progress = 1 - remain / BOSS_EVERY;
+  return { progress, text: `🎯 다음 보스: ${nextFloor}층 (${remain}층 남음)` };
+}
+
+// 5. 환생 가능까지 남은 레벨
+function rebirthGoal() {
+  if (state.level >= REBIRTH_LEVEL) return { progress: 1, text: `🎯 환생 가능! 영혼 +${soulGain()}` };
+  const remain = REBIRTH_LEVEL - state.level;
+  const progress = state.level / REBIRTH_LEVEL;
+  return { progress, text: `🎯 환생까지 Lv.${remain} 남음` };
+}
+
+function renderGoals() {
+  const goals = [nextGearGoal(), nextSkillGoal(), nearestAchGoal(), nextBossGoal(), rebirthGoal()]
+    .filter(Boolean)
+    .sort((a, b) => b.progress - a.progress)
+    .slice(0, 2);
+  const el = $('goals');
+  el.innerHTML = goals.length
+    ? goals.map(g => `<div class="goal">${g.text}</div>`).join('')
+    : `<div class="goal full">🎉 모든 목표를 달성했습니다!</div>`;
+}
+
+/* ============================================================
+   몬스터 도감 — 종x등급 240칸의 처치 기록. 완성률 = 최소 1번 잡아본 칸 / 240.
+   아직 한 번도 안 잡은 종은 이름 대신 ???, 아이콘 대신 ❔로 가린다.
+   ============================================================ */
+function renderDex() {
+  const filled = dexCellsFilled();
+  $('dexsum').innerHTML = `도감 완성 <b>${filled} / ${DEX_TOTAL}</b> (${(filled / DEX_TOTAL * 100).toFixed(1)}%)`;
+  $('dexlist').innerHTML = MONSTERS.map((m, idx) => {
+    const e = state.dex[idx];
+    const seen = !!e && e.kills > 0;
+    const pips = TIERS.map((_, t) => `<span class="d-pip${seen && (e.tiers & (1 << t)) ? ' on' : ''}"></span>`).join('');
+    return `<div class="dex${seen ? ' seen' : ''}">
+      <span class="d-ico">${seen ? m.icon : '❔'}</span>
+      <span class="d-main">
+        <span class="d-name">${seen ? m.name : '???'}</span>
+        <span class="d-desc">${seen ? m.desc : '아직 발견하지 못한 몬스터입니다'}</span>
+        <span class="d-pips">${pips}</span>
+      </span>
+      <span class="d-kills">${seen ? `${fmt(e.kills)}마리` : '-'}</span>
+    </div>`;
+  }).join('');
+}
+
 /* 스킬 버튼 — 해금 전에는 필요 레벨을, 쿨 중에는 남은 초를 보여 준다. */
 const skillRows = SKILLS.map(k => {
   const b = document.createElement('button');
@@ -1721,6 +1924,8 @@ function render() {
   $('autofeed').textContent = '자동 ' + (state.autoFeed ? '✓' : '✕');
   $('autofeed').classList.toggle('on', !!state.autoFeed);
   if (!$('achshop').hidden) renderAch();
+  if (!$('dexshop').hidden) renderDex();
+  renderGoals();
   $('s-exp').textContent   = `${fmt(state.exp)} / ${fmt(need)}`;
   $('s-expbar').style.width = Math.min(100, state.exp / need * 100) + '%';
   $('feed').disabled = state.jelly < 1;
@@ -1865,6 +2070,8 @@ function load() {
       soulUp: { ...base.soulUp, ...(saved.soulUp || {}) },
       ach:    (saved.ach && typeof saved.ach === 'object') ? saved.ach : {},
       lt:     { ...base.lt, ...(saved.lt || {}) },
+      // 도감이 없던 시절의 세이브는 dex 필드가 비어 있다 — 빈 객체로 채운다.
+      dex:    (saved.dex && typeof saved.dex === 'object') ? saved.dex : {},
       // 일일 보상이 없던 시절의 세이브는 daily 필드가 비어 있다. 기본값으로 채우고
       // ensureDaily()가 날짜를 보고 오늘 치 스트릭·임무를 새로 만들게 둔다.
       daily:  { ...base.daily, ...(saved.daily || {}) } };
@@ -2126,6 +2333,7 @@ function wireModal(id, openerId, onOpen) {
 }
 wireModal('wshop', 'shopbtn', renderShop);
 wireModal('achshop', 'achbtn', renderAch);
+wireModal('dexshop', 'dexbtn', renderDex);
 $('geartabs').addEventListener('click', e => {
   const b = e.target.closest('button');
   if (!b) return;
