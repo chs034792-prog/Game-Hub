@@ -627,6 +627,48 @@
   .note { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
   .warn { color: var(--gold); }
 
+  /* ---- 일일 보상 버튼 ----
+     기존 스탯·버튼 줄을 가리지 않도록 뷰포트 코너에 고정한다.
+     모달(z-index 50)보다는 낮게 둬서 모달이 열리면 뒤로 깔린다. */
+  .dailybtn {
+    position: fixed; right: 16px; bottom: 16px; z-index: 40;
+    width: 48px; height: 48px; padding: 0; border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 20px; line-height: 1;
+    box-shadow: 0 8px 20px #0008;
+  }
+  .dailydot {
+    position: absolute; top: 2px; right: 2px;
+    width: 11px; height: 11px; border-radius: 50%;
+    background: #ff6b6b; border: 2px solid var(--panel);
+  }
+
+  /* ---- 일일 보상 모달 ---- */
+  .streakrow { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .streakday {
+    flex: 1; min-width: 38px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 8px 4px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--panel-hi);
+    font-size: 9px; color: var(--muted); text-align: center;
+  }
+  .streakday .sd-n { font-size: 11px; font-weight: 700; color: var(--text); }
+  .streakday.cur { border-color: var(--accent); background: #1f2a25; }
+  .streakday.cur .sd-n { color: var(--accent); }
+  .streakday.past { opacity: 0.55; }
+  .missionlist {
+    display: flex; flex-direction: column; gap: 10px;
+    flex: 1; min-height: 0; overflow-y: auto;
+  }
+  .mission { border: 1px solid var(--line); background: var(--panel-hi); border-radius: 10px; padding: 10px 12px; }
+  .mission .m-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .mission .m-name { font-size: 13px; font-weight: 600; }
+  .mission .m-rew { font-size: 11px; color: var(--gold); font-weight: 700; white-space: nowrap; }
+  .mission .m-bar { height: 6px; background: #0d0f16; border: 1px solid var(--line); border-radius: 99px; overflow: hidden; margin-bottom: 6px; }
+  .mission .m-bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); }
+  .mission .m-foot { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); }
+  .mission button.claim { width: auto; padding: 6px 12px; font-size: 12px; font-weight: 700; }
+
   /* 좁은 화면 보정.
      미디어쿼리도 특이도가 같으면 순서로 이긴다 — 위쪽 @media에 두면
      아래에 나오는 .hpwrap 기본 규칙에 밀린다. 그래서 끝에 모아 뒀다. */
@@ -634,6 +676,9 @@
     .hpwrap { width: 118px; }
     .tagwrap { width: 106px; }
     .ename, .ehpnum { font-size: 9px; }
+    .streakday { min-width: 30px; padding: 6px 2px; font-size: 8px; }
+    .streakday .sd-n { font-size: 10px; }
+    .dailybtn { width: 42px; height: 42px; font-size: 17px; right: 12px; bottom: 12px; }
   }
 
   /* 멀미·발작 민감 사용자를 위한 OS 설정을 존중한다 */
@@ -734,6 +779,9 @@
 
 </div>
 
+<!-- 일일 접속 보상 + 일일 임무. 기존 스탯·버튼 줄과 겹치지 않게 화면 코너에 고정한다. -->
+<button class="dailybtn" id="dailybtn" aria-label="일일 보상 열기">📅<span class="dailydot" id="dailydot" hidden></span></button>
+
 <div class="modal" id="upshop" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="upshop-title">
     <div class="sheethead">
@@ -797,6 +845,22 @@
     <p class="note" id="achsum"></p>
     <div class="achlist" id="achlist"></div>
     <p class="note">업적은 <b>환생해도 사라지지 않습니다.</b> 하나 달성할 때마다 모든 수치가 1%씩 오릅니다.</p>
+  </div>
+</div>
+
+<div class="modal" id="dailymodal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="dailymodal-title">
+    <div class="sheethead">
+      <h2 id="dailymodal-title">📅 일일 보상</h2>
+      <button class="iconbtn" id="dailymodal-close" aria-label="닫기">✕</button>
+    </div>
+
+    <h2>접속 보상 — 연속 <span id="d-streak">1</span>일차</h2>
+    <div class="streakrow" id="streakrow"></div>
+    <button class="feed" id="loginclaim">받기</button>
+
+    <h2 style="margin-top:16px;">오늘의 임무</h2>
+    <div class="missionlist" id="missionlist"></div>
   </div>
 </div>
 
@@ -1049,9 +1113,53 @@ const REBIRTH_LEVEL = 20;     // 환생 가능 최소 레벨
 const OFFLINE_CAP_H = 8;      // 오프라인 보상 기본 상한(시간) — 영혼의 꿈으로 늘린다
 const SAVE_KEY = 'slime-idle-v1';
 
+/* 일일 접속 보상 — 연속 접속일(스트릭) 1~7일차 보상. 7일을 넘기면 1일차부터 다시 돈다.
+   금액 근거는 README "일일 접속 보상 · 일일 임무" 참고.
+   1일차(50)는 '젤리밭' 첫 구매가(60)보다 살짝 낮은, 초반 몇 분 치 자동 수입 수준이고,
+   7일차(420 + 영혼 3)는 업적 보상(영혼 2~5대) 과 비슷한 무게로 잡았다. */
+const DAILY_LOGIN_REWARDS = [
+  { jelly: 50,  soul: 0 },  // 1일차
+  { jelly: 80,  soul: 0 },  // 2일차
+  { jelly: 120, soul: 1 },  // 3일차
+  { jelly: 170, soul: 0 },  // 4일차
+  { jelly: 230, soul: 0 },  // 5일차
+  { jelly: 300, soul: 0 },  // 6일차
+  { jelly: 420, soul: 3 },  // 7일차
+];
+
+/* 일일 임무 3개 — 그날 자정에 날짜 문자열을 시드로 고정 선택된다(genDailyMissions).
+   카테고리마다 변형을 2개씩 둬서 날짜마다 난이도가 살짝 달라진다.
+   주의: 보상은 전부 고정값이다. 레벨·영혼 배율을 걸면 사냥 보상과 같은 '닫힌 고리'
+   문제가 생기므로(README "고리를 일부러 하나 끊어 두었다") 걸지 않는다. */
+const DAILY_MISSION_POOL = {
+  kill: [
+    { target: 20, jelly: 50,  label: n => `몬스터 ${n}마리 처치` },
+    { target: 40, jelly: 90,  label: n => `몬스터 ${n}마리 처치` },
+  ],
+  buy: [
+    { target: 3, jelly: 60,  label: n => `업그레이드 ${n}회 구매` },
+    { target: 6, jelly: 110, label: n => `업그레이드 ${n}회 구매` },
+  ],
+  floorboss: [
+    { kind: 'floor', target: 10, jelly: 70,              label: n => `오늘 층 ${n}개 내려가기` },
+    { kind: 'boss',  target: 1,  jelly: 100, soul: 1,     label: n => `보스 ${n}회 처치` },
+  ],
+};
+
 /* ============================================================
    2. 상태 — 저장되는 값은 전부 여기에만 둔다
    ============================================================ */
+/* 일일 보상·임무 상태. date는 'YYYY-MM-DD'(로컬 날짜) 문자열이고, 이 값이
+   오늘과 다르면 ensureDaily()가 새 날짜로 갈아 끼운다. */
+function freshDaily() {
+  return {
+    date: null,          // 마지막으로 활성화된 날 (null이면 아직 한 번도 안 돌았다)
+    streak: 0,           // 연속 접속일. ensureDaily가 날짜가 바뀔 때 1~7로 갱신한다
+    loginClaimed: false, // 오늘 접속 보상을 받았는지
+    missions: [],        // 오늘의 임무 3개 (genDailyMissions가 채운다)
+  };
+}
+
 function freshState() {
   return {
     jelly: 0,
@@ -1076,6 +1184,7 @@ function freshState() {
     ach: {},
     lt: { kills: 0, bossKills: 0, clicks: 0, maxStage: 1, rebirths: 0 },
     lastSeen: Date.now(),
+    daily: freshDaily(),
   };
 }
 let state = freshState();
@@ -1301,8 +1410,10 @@ function damageMonster(amount) {
   state.jelly += rewardOfStage(st) * killJellyMult();
   gainExp(expOfStage(st) * expMult());
   state.lt.kills++;
+  dailyAddProgress('kill');   // 보스도 몬스터이므로 처치 임무에 같이 센다
   if (boss) {
     state.lt.bossKills++;
+    dailyAddProgress('boss');
     slainFx();
     /* 영혼은 50층마다, 그것도 처음 넘을 때만 준다.
        보스마다 주면 깊이 내려갈수록 영혼이 쏟아져 전체 배율(soulMult)이
@@ -1316,6 +1427,7 @@ function damageMonster(amount) {
     }
   }
   state.stage++;
+  dailyAddProgress('floor');   // 한 번의 처치는 최대 한 층만 넘기므로 +1로 충분하다
   if (state.stage > state.lt.maxStage) state.lt.maxStage = state.stage;
   startFloor();
   checkAch();
@@ -1360,6 +1472,7 @@ function buy(u) {
   if (k < 1) return;
   state.jelly -= costOfMany(u, k);   // stepsFor가 이미 살 수 있는 만큼만 돌려준다
   state.up[u.id] += k;
+  dailyAddProgress('buy');   // 일괄로 몇 단계를 샀든 '구매 1회'로 센다
 }
 
 /* 장비 세 칸(무기·방어구·장신구)은 사고 끼우는 방식이 똑같다.
@@ -1411,6 +1524,7 @@ function rebirth() {
    ============================================================ */
 let last = performance.now();
 let autoFeedT = 0;
+let dailyCheckT = 0;
 function frame(now) {
   const dt = Math.min((now - last) / 1000, 0.25);  // 탭 복귀 시 폭주 방지
   last = now;
@@ -1424,6 +1538,9 @@ function frame(now) {
     autoFeedT += dt;
     if (autoFeedT >= 1) { autoFeedT = 0; feed(); }
   }
+  // 자정을 넘기면 다음 날짜로 — 매 프레임 Date를 새로 찍을 필요는 없으니 5초마다만 본다
+  dailyCheckT += dt;
+  if (dailyCheckT >= 5) { dailyCheckT = 0; ensureDaily(); }
   render();
   requestAnimationFrame(frame);
 }
@@ -1617,6 +1734,8 @@ function render() {
     : `♻️ 환생 · 영혼 +${soulGain()}`;
 
   if (!$('upshop').hidden) renderUpgrades();
+  $('dailydot').hidden = !dailyHasReward();
+  if (!$('dailymodal').hidden) renderDaily();
 
   // 레벨이 오를수록 커지고 색이 변한다.
   // 색조는 .slime에만 건다 — .sizer에 걸면 그 안의 무기 이모지까지 물든다.
@@ -1745,10 +1864,14 @@ function load() {
       up:     { ...base.up,     ...(saved.up     || {}) },
       soulUp: { ...base.soulUp, ...(saved.soulUp || {}) },
       ach:    (saved.ach && typeof saved.ach === 'object') ? saved.ach : {},
-      lt:     { ...base.lt, ...(saved.lt || {}) } };
+      lt:     { ...base.lt, ...(saved.lt || {}) },
+      // 일일 보상이 없던 시절의 세이브는 daily 필드가 비어 있다. 기본값으로 채우고
+      // ensureDaily()가 날짜를 보고 오늘 치 스트릭·임무를 새로 만들게 둔다.
+      daily:  { ...base.daily, ...(saved.daily || {}) } };
   } catch {
     return;
   }
+  if (!Array.isArray(state.daily.missions)) state.daily.missions = [];
   // 장비 칸·평생 기록이 없던 시절의 세이브를 지금 모양으로 맞춘다
   for (const k of ['weapons', 'armors', 'trinkets']) if (!Array.isArray(state[k])) state[k] = [];
   if (typeof state.bossBest !== 'number') state.bossBest = 0;
@@ -1862,6 +1985,124 @@ function popText(text, x, y, crit = false) {
 }
 
 /* ============================================================
+   일일 보상 · 일일 임무
+   ============================================================ */
+// 로케일 문자열 포맷에 의존하지 않고 년/월/일을 직접 뽑아 'YYYY-MM-DD'를 만든다.
+// toLocaleDateString은 기기 설정에 따라 포맷이 달라져서 날짜 비교에 쓸 수 없다.
+function localDateKey(d = new Date()) {
+  const y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
+  return `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+// 날짜 문자열을 시드로 쓰는 간단한 해시. 같은 날이면 항상 같은 임무가 나오고,
+// 날이 바뀌면 다른 조합이 나오게 한다 — Math.random()처럼 재접속마다 바뀌면 안 된다.
+function seededIndex(key, mod) {
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return h % mod;
+}
+
+// 오늘의 임무 3개를 고정 생성한다. 카테고리(처치/구매/층-보스)에서 하나씩 뽑으므로
+// 항상 '몬스터 처치' 1개 + '업그레이드 구매' 1개 + '층 또는 보스' 1개 구성이 된다.
+function genDailyMissions(dateKey) {
+  const kill = DAILY_MISSION_POOL.kill[seededIndex(dateKey + 'k', DAILY_MISSION_POOL.kill.length)];
+  const buyM = DAILY_MISSION_POOL.buy[seededIndex(dateKey + 'b', DAILY_MISSION_POOL.buy.length)];
+  const fb   = DAILY_MISSION_POOL.floorboss[seededIndex(dateKey + 'f', DAILY_MISSION_POOL.floorboss.length)];
+  return [
+    { id: 'kill', kind: 'kill', target: kill.target, progress: 0, claimed: false,
+      reward: { jelly: kill.jelly, soul: kill.soul || 0 }, label: kill.label(kill.target) },
+    { id: 'buy',  kind: 'buy',  target: buyM.target, progress: 0, claimed: false,
+      reward: { jelly: buyM.jelly, soul: buyM.soul || 0 }, label: buyM.label(buyM.target) },
+    { id: 'fb',   kind: fb.kind, target: fb.target, progress: 0, claimed: false,
+      reward: { jelly: fb.jelly, soul: fb.soul || 0 }, label: fb.label(fb.target) },
+  ];
+}
+
+/* 날짜가 바뀌었는지 확인하고, 바뀌었으면 스트릭과 오늘의 임무를 새로 만든다.
+   어제까지 활성이었으면(= 연속 접속) 스트릭을 1~7 사이에서 한 칸 올리고,
+   하루라도 걸렀으면(또는 첫 플레이면) 1로 되돌린다. */
+function ensureDaily() {
+  const today = localDateKey();
+  if (state.daily.date === today) return;
+  const prevDate = state.daily.date;
+  const yesterdayKey = localDateKey(new Date(Date.now() - 86400000));
+  const consecutive = prevDate === yesterdayKey;
+  state.daily.streak = consecutive ? (state.daily.streak % 7) + 1 : 1;
+  state.daily.date = today;
+  state.daily.loginClaimed = false;
+  state.daily.missions = genDailyMissions(today);
+}
+
+// 임무 진행도를 더한다. kind가 일치하고 아직 못 받은 임무만 올라간다.
+// 처음으로 목표를 채운 순간에만 완료 알림을 한 번 띄운다.
+function dailyAddProgress(kind, amt = 1) {
+  for (const m of state.daily.missions) {
+    if (m.kind !== kind || m.claimed) continue;
+    const wasDone = m.progress >= m.target;
+    m.progress = Math.min(m.target, m.progress + amt);
+    if (!wasDone && m.progress >= m.target) {
+      note(`✅ 일일 임무 완료: ${m.label} — 📅 버튼에서 받으세요`);
+    }
+  }
+}
+
+// 📅 버튼에 점을 띄울지 — 로그인 보상을 아직 안 받았거나, 완료된 임무가 남아 있으면 켠다.
+function dailyHasReward() {
+  if (!state.daily.loginClaimed) return true;
+  return state.daily.missions.some(m => !m.claimed && m.progress >= m.target);
+}
+
+function claimDailyLogin() {
+  if (state.daily.loginClaimed) return;
+  const tier = DAILY_LOGIN_REWARDS[state.daily.streak - 1];
+  state.jelly += tier.jelly;
+  if (tier.soul) { state.souls += tier.soul; state.soulsTotal += tier.soul; }
+  state.daily.loginClaimed = true;
+  note(`📅 ${state.daily.streak}일차 접속 보상! 젤리 +${fmt(tier.jelly)}${tier.soul ? ` · 영혼 +${tier.soul}` : ''}`);
+  renderDaily();
+}
+
+function claimDailyMission(id) {
+  const m = state.daily.missions.find(x => x.id === id);
+  if (!m || m.claimed || m.progress < m.target) return;
+  m.claimed = true;
+  state.jelly += m.reward.jelly || 0;
+  if (m.reward.soul) { state.souls += m.reward.soul; state.soulsTotal += m.reward.soul; }
+  note(`✅ 일일 임무 완료! ${m.label} — 젤리 +${fmt(m.reward.jelly || 0)}${m.reward.soul ? ` · 영혼 +${m.reward.soul}` : ''}`);
+  renderDaily();
+}
+
+// 모달이 열려 있을 때만 호출된다(render()와 wireModal 참고). 닫혀 있으면 그릴 이유가 없다.
+function renderDaily() {
+  const d = state.daily;
+  $('d-streak').textContent = d.streak;
+  $('streakrow').innerHTML = DAILY_LOGIN_REWARDS.map((tier, i) => {
+    const n = i + 1;
+    const cls = n === d.streak ? 'cur' : n < d.streak ? 'past' : '';
+    return `<div class="streakday ${cls}">
+      <span class="sd-n">${n}일</span>
+      <span>젤리 +${fmt(tier.jelly)}${tier.soul ? `<br>영혼 +${tier.soul}` : ''}</span></div>`;
+  }).join('');
+  const curTier = DAILY_LOGIN_REWARDS[d.streak - 1];
+  $('loginclaim').disabled = d.loginClaimed;
+  $('loginclaim').textContent = d.loginClaimed
+    ? '오늘 받음 ✓'
+    : `받기 — 젤리 +${fmt(curTier.jelly)}${curTier.soul ? ` · 영혼 +${curTier.soul}` : ''}`;
+
+  $('missionlist').innerHTML = d.missions.map(m => {
+    const pct = Math.min(100, m.progress / m.target * 100);
+    const done = m.progress >= m.target;
+    return `<div class="mission">
+      <div class="m-top"><span class="m-name">${m.label}</span>
+        <span class="m-rew">젤리 +${fmt(m.reward.jelly)}${m.reward.soul ? ` · 영혼 +${m.reward.soul}` : ''}</span></div>
+      <div class="m-bar"><i style="width:${pct}%"></i></div>
+      <div class="m-foot"><span>${Math.min(m.progress, m.target)} / ${m.target}</span>
+        <button class="claim" data-claim="${m.id}" ${(!done || m.claimed) ? 'disabled' : ''}>${m.claimed ? '완료' : '받기'}</button></div>
+    </div>`;
+  }).join('');
+}
+
+/* ============================================================
    10. 연결
    ============================================================ */
 stage.addEventListener('pointerdown', e => hit(e.clientX, e.clientY));
@@ -1908,7 +2149,16 @@ $('rebirth').onclick = () => {
   if (confirm(`환생하면 레벨과 업그레이드가 초기화됩니다. 영혼 ${soulGain()}개를 얻습니다. 계속할까요?`)) rebirth();
 };
 
+wireModal('dailymodal', 'dailybtn', renderDaily);
+$('loginclaim').onclick = claimDailyLogin;
+$('missionlist').addEventListener('click', e => {
+  const b = e.target.closest('button[data-claim]');
+  if (!b) return;
+  claimDailyMission(b.dataset.claim);
+});
+
 load();
+ensureDaily();          // 날짜가 바뀌어 있으면 오늘 치 스트릭·임무를 바로 만든다
 startFloor();          // 제한 시간·공격 주기를 켠 상태로 시작한다
 layoutArena();
 addEventListener('resize', layoutArena);
