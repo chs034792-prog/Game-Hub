@@ -98,4 +98,6 @@ python -m http.server
 | 시나리오팀 | `gamehub-scenario-writer`, `gamehub-scenario-director` | [시나리오/](시나리오/README.md) |
 | 아트팀 (시각화) | `gamehub-artist-style`, `gamehub-artist-visual` | [아트/](아트/README.md) |
 
-기획은 기획경영부 `game-planner`가 `기획/`에 쓴다. 직원은 로컬 커밋까지만 하고, GitHub 푸시는 사람이 확인한 뒤 한다.
+새 직원 교육자료는 [교육/프로젝트_교육자료.md](교육/프로젝트_교육자료.md) (게임 4개·허브 소개, 모든 직원이 먼저 읽음).
+
+기획은 기획경영부 `game-planner`가 `기획/`에 쓴다. 직원은 로컬 커밋까지만 하고, GitHub 푸시는 대표님 지시로 기획경영부 `server-admin`이 한다.
