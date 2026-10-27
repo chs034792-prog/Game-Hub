@@ -101,6 +101,39 @@
   }
   .card:hover .go { background: linear-gradient(180deg, #5c93ff, #3a6fee); }
 
+  /* ── 처음 온 사람 안내 배너 ──────────────────────── */
+  .banner {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    justify-content: space-between;
+    margin-bottom: 16px; padding: 12px 14px;
+    background: linear-gradient(180deg, rgba(75,134,255,.14), rgba(75,134,255,.04)), var(--surface);
+    border: 1px solid var(--line-strong); border-radius: var(--r-md);
+    box-shadow: var(--hair), var(--sh-1);
+  }
+  .banner p { font-size: 13px; color: var(--text); line-height: 1.5; flex: 1; min-width: 0; }
+  .banner p b { color: var(--cyan); }
+  .banner .x {
+    flex-shrink: 0; width: 26px; height: 26px; border-radius: 999px;
+    border: 1px solid var(--line); background: rgba(255,255,255,.05); color: var(--text-dim);
+    font-size: 13px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .banner .x:hover { color: var(--text); border-color: var(--line-strong); }
+
+  /* ── 허브 공통 뱃지 ──────────────────────────────── */
+  .badges { margin-top: 18px; }
+  .badges .ttl { font-size: 11.5px; color: var(--text-mute); letter-spacing: .12em; margin-bottom: 8px; }
+  .badge-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 11px; border-radius: 999px; font-size: 12px; font-weight: 700;
+    background: rgba(255,255,255,.04); border: 1px solid var(--line); color: var(--text-mute);
+    opacity: .45; cursor: default; user-select: none;
+  }
+  .badge.on {
+    opacity: 1; color: var(--gold); border-color: rgba(255,212,94,.5);
+    background: rgba(255,212,94,.08);
+  }
+
   footer { margin-top: 26px; text-align: center; }
   .total {
     display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px;
@@ -121,9 +154,12 @@
     <p class="sub">PICK YOUR GAME</p>
   </header>
 
+  <div id="banner"></div>
+
   <div class="grid" id="grid"></div>
 
   <footer>
+    <div class="badges" id="badges"></div>
     <div class="total" id="total"></div>
     <p class="hint">
       기록은 브라우저에 저장되며, 각 게임을 따로 열어 플레이한 기록도 그대로 이어집니다.<br>
@@ -255,14 +291,88 @@ $('grid').innerHTML = GAMES.map(g => {
 
 // 아래 통합 기록 — 기록이 남은 게임만 센다
 const played = GAMES.filter(g => { try { return !!g.record(); } catch (e) { return false; } }).length;
+const slime = read('slime-idle-v1') || {};
 const nx = read('nexusdefense.save') || {}, md = read('moneydefense.v4') || {};
 const wallRec = read('wallDefenseRecords2') || {}, wallMeta = read('wallDefenseMeta') || {};
 const runs = (+nx.runs || 0) + (+md.plays || 0) + (+((wallMeta.stats || {}).runs) || 0);
 const bestWave = Math.max(+nx.best || 0, 0, ...Object.values(wallRec).map(o => +o.best || 0));
+const moneyBest = Math.max(0, ...Object.values(md.best || {}).map(Number).filter(n => !isNaN(n)));
+const wallBest = Object.values(wallRec).length
+  ? Math.max(0, ...Object.values(wallRec).map(o => Math.max(+o.best || 0, +o.endless || 0)))
+  : 0;
 $('total').innerHTML =
   `<span>플레이한 게임<b>${played} / ${GAMES.length}</b></span>` +
   `<span>총 출격 횟수<b>${fmt(runs)}</b></span>` +
   `<span>최고 웨이브<b>${fmt(bestWave)}</b></span>`;
+
+/* ── 처음 온 사람 안내 배너 ──────────────────────────────
+   허브 전용 저장 키(게임 저장 키와는 별개). 게임 저장 키는 여기서도 읽기만 한다. */
+const HUB_UI_KEY = 'gamehub.ui.v1';
+function readHubUi() {
+  try { const v = localStorage.getItem(HUB_UI_KEY); return v ? JSON.parse(v) : {}; } catch (e) { return {}; }
+}
+function writeHubUi(next) {
+  try { localStorage.setItem(HUB_UI_KEY, JSON.stringify(next)); } catch (e) {}
+}
+const noRecordAtAll = GAMES.every(g => { try { return !g.record(); } catch (e) { return true; } });
+const hubUi = readHubUi();
+if (noRecordAtAll && !hubUi.bannerDismissed) {
+  $('banner').innerHTML = `<div class="banner" id="firstBanner">
+    <p>처음이라면 <b>🟢 슬라임 키우기</b>부터 시작해 보세요 — 가장 쉽게 감을 잡을 수 있어요.</p>
+    <button class="x" id="bannerClose" type="button" aria-label="안내 닫기">✕</button>
+  </div>`;
+  $('bannerClose').addEventListener('click', () => {
+    writeHubUi(Object.assign(readHubUi(), { bannerDismissed: true }));
+    $('banner').innerHTML = '';
+  });
+}
+
+/* ── 허브 공통 뱃지 ──────────────────────────────────────
+   조건은 각 게임 저장 데이터를 읽기만 해서 판단한다 (쓰지 않음). */
+function todayStr() {
+  const d = new Date();
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function missionsAllClaimed(daily, wallStyle) {
+  if (!daily) return false;
+  if (wallStyle) {
+    return Array.isArray(daily.claimed) && daily.claimed.length > 0 && daily.claimed.every(Boolean);
+  }
+  return Array.isArray(daily.missions) && daily.missions.length > 0 && daily.missions.every(m => m && m.claimed);
+}
+const today = todayStr();
+const dailyBlocks = [
+  { date: slime.daily && slime.daily.date, daily: slime.daily, wallStyle: false },
+  { date: nx.daily && nx.daily.date, daily: nx.daily, wallStyle: false },
+  { date: md.daily && md.daily.date, daily: md.daily, wallStyle: false },
+  { date: wallMeta.daily && wallMeta.daily.day, daily: wallMeta.daily, wallStyle: true },
+];
+const maxStreak = Math.max(
+  +((slime.daily || {}).streak) || 0,
+  +((nx.daily || {}).streak) || 0,
+  +((md.daily || {}).streak) || 0,
+  +((wallMeta.daily || {}).streak) || 0,
+);
+const todayAllMissionsDone = dailyBlocks.some(b => b.date === today && missionsAllClaimed(b.daily, b.wallStyle));
+
+const BADGES = [
+  { icon: '🧭', name: '올라운더', cond: played === 4, title: '4개 게임 모두 기록 보유' },
+  { icon: '🗺️', name: '탐험가', cond: played >= 2, title: '2개 이상 게임에서 기록 보유' },
+  { icon: '🟢', name: '슬라임 10레벨', cond: (+slime.level || 0) >= 10, title: '슬라임 키우기 레벨 10 이상' },
+  { icon: '🔷', name: '넥서스 웨이브 100', cond: (+nx.best || 0) >= 100, title: '넥서스 디펜스 최고 웨이브 100 이상' },
+  { icon: '💰', name: '머니 라운드 50', cond: moneyBest >= 50, title: '머니 디펜스 최고 라운드 50 이상' },
+  { icon: '🧱', name: '벽짓살 웨이브 50', cond: wallBest >= 50, title: '극한 벽짓고 살아남기 최고 웨이브 50 이상' },
+  { icon: '🔥', name: '연속 접속 3일', cond: maxStreak >= 3, title: '어느 한 게임이라도 일일 접속 연속 3일 이상' },
+  { icon: '🔥', name: '연속 접속 7일', cond: maxStreak >= 7, title: '어느 한 게임이라도 일일 접속 연속 7일 이상' },
+  { icon: '📅', name: '오늘의 임무 올클리어', cond: todayAllMissionsDone, title: '오늘 날짜의 일일 임무를 한 게임에서 모두 완료' },
+  { icon: '💎', name: '퇴직금 보유', cond: (+((md.meta || {}).points) || 0) > 0, title: '머니 디펜스 영구 재화 "퇴직금"을 보유' },
+];
+$('badges').innerHTML =
+  `<div class="ttl">허브 공통 뱃지</div>` +
+  `<div class="badge-row">${BADGES.map(b =>
+    `<span class="badge${b.cond ? ' on' : ''}" title="${b.title}">${b.icon} ${b.name}</span>`
+  ).join('')}</div>`;
 </script>
 </body>
 </html>
