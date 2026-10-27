@@ -169,6 +169,37 @@
   #zoneBox h3 { font-size: 20px; font-weight: 800; text-align: center; margin-bottom: 2px; }
   #zoneBox .hint { text-align: center; margin-bottom: 10px; font-size: 11px; }
 
+  /* 첫 판 안내 — 처음 켠 사람에게만 상황별로 뜨는 짧은 말풍선.
+     화면 전체를 가리지 않는 작은 상자라 밑에 있는 버튼도 그대로 보인다.
+     375px 폭에서도 잘리지 않게 max-width 를 뷰포트 기준으로 둔다. */
+  #tutBubble {
+    display: none; position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
+    z-index: 1200; width: min(94vw, 360px);
+    background: linear-gradient(180deg, #1c2744, #121a2e);
+    border: 1px solid var(--line-strong); border-radius: var(--r-lg);
+    box-shadow: var(--sh-3), var(--hair); padding: 14px 16px;
+  }
+  #tutBubble.on { display: block; }
+  #tutBubble .tutHead {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px;
+  }
+  #tutBubble .tutHead b { font-size: 11px; color: var(--gold); letter-spacing: .04em; }
+  #tutText { font-size: 13.5px; line-height: 1.55; color: var(--text); }
+  #tutBubble .row { gap: 8px; margin-top: 12px; }
+  #tutBubble button { padding: 9px 12px; font-size: 13px; }
+  #tutBtnSkip { background: none; border: 1px solid var(--line); color: var(--text-mute); flex: 1; }
+  #tutBtnNext { flex: 1; }
+  /* 안내가 가리키는 실제 요소를 금색으로 은근히 반짝여서 눈에 띄게 한다 */
+  .tutHighlight {
+    outline: 2px solid var(--gold); outline-offset: 2px; border-radius: var(--r-md);
+    box-shadow: 0 0 0 4px rgba(255,212,94,.22);
+    animation: tutPulse 1.1s ease-in-out infinite;
+  }
+  @keyframes tutPulse {
+    0%, 100% { outline-color: rgba(255,212,94,.95); }
+    50%      { outline-color: rgba(255,212,94,.35); }
+  }
+
   /* 병력 상세 — 카드에 다 담기지 않는 설명을 창으로 띄운다 */
   #unitOverlay {
     display: none; position: fixed; inset: 0; z-index: 1000;
@@ -798,7 +829,9 @@
   <div style="margin-top:10px;display:flex;gap:12px;justify-content:center">
     <button id="btnBackup" style="background:none;border:none;color:#3a415a;font-size:11px;padding:4px;text-decoration:underline;cursor:pointer">코드 관리</button>
     <button id="btnCoupon" style="background:none;border:none;color:#ffd45e;font-size:11px;padding:4px;text-decoration:underline;cursor:pointer">쿠폰 입력</button>
+    <button id="btnTutorialReplay" style="background:none;border:none;color:#7fe7ff;font-size:11px;padding:4px;text-decoration:underline;cursor:pointer">안내 다시 보기</button>
   </div>
+  <p class="hint" id="tutorialReplayMsg" style="margin-top:4px;min-height:14px;color:#7fe7ff"></p>
 </div>
 
 <!-- ── 상점 화면 ────────────────────────────── -->
@@ -845,7 +878,7 @@
   <div id="stage">
     <canvas id="cv" width="960" height="720"></canvas>
     <div id="topbar">
-      <div class="chip"><small>웨이브</small><span id="uiWave">1</span></div>
+      <div class="chip" id="waveChip"><small>웨이브</small><span id="uiWave">1</span></div>
       <div class="chip"><small>골드</small><span id="uiGold" style="color:#ffd45e">0</span></div>
       <div class="chip"><small>인구</small><span id="uiPop">0/0</span></div>
       <div class="chip" id="hpwrap">
@@ -952,6 +985,17 @@
     <p class="hint" style="color:#6d7ba0">웨이브가 진행될수록 새로운 지역이 열립니다.<br>해금한 지역을 누르면 출격 시작 지점으로 고를 수 있습니다.</p>
     <div id="zoneList" style="margin-top:9px;display:flex;flex-direction:column;gap:4px"></div>
     <button class="ghost" id="btnZoneClose" style="width:100%;margin-top:14px">닫기</button>
+  </div>
+</div>
+
+<!-- ── 첫 판 안내 말풍선 — 처음 켠 사람에게만, 상황이 처음 생길 때 하나씩 뜬다.
+     화면을 가리지 않는 작은 상자라 game/menu/shop 어느 화면에서도 같이 쓴다. -->
+<div id="tutBubble">
+  <div class="tutHead"><b id="tutStepNum">1/7</b></div>
+  <p id="tutText"></p>
+  <div class="row">
+    <button id="tutBtnSkip">건너뛰기</button>
+    <button id="tutBtnNext">다음</button>
   </div>
 </div>
 
@@ -2140,7 +2184,17 @@ function migrate() {
 }
 
 function loadSave() {
-  try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); } catch (e) {}
+  // 저장 키가 원래 없었는지(진짜 첫 실행인지)를 덮어쓰기 전에 봐 둔다 —
+  // 이게 1차 기준이고, runs/best 가 둘 다 0인지를 더해 백업 코드 불러오기 같은
+  // 엣지케이스에서도 "기존 플레이어"를 새 사람으로 잘못 보지 않게 한다.
+  const rawBeforeLoad = localStorage.getItem(SAVE_KEY);
+  try { Object.assign(save, JSON.parse(rawBeforeLoad || '{}')); } catch (e) {}
+  // 첫 판 안내 — 저장 기록이 전혀 없던 사람에게만 처음부터 띄운다.
+  // 기존 필드처럼, 저장에 없으면 기본값을 채워 넣어 옛 세이브도 깨지지 않게 한다.
+  if (!save.tutorial || typeof save.tutorial !== 'object') {
+    const brandNew = rawBeforeLoad === null && save.runs === 0 && save.best === 0;
+    save.tutorial = brandNew ? { step: 0, done: false } : { step: TUTORIAL_STEPS.length, done: true };
+  }
   for (const m of [...META, ...BARRACK_META, ...HERO_META])
     if (typeof save.meta[m.id] !== 'number') save.meta[m.id] = 0;
   if (!save.meta.heroLevels || typeof save.meta.heroLevels !== 'object') save.meta.heroLevels = {};
@@ -2454,6 +2508,76 @@ function show(name, fromPop) {
   $('dailyBtn').classList.toggle('show', name === 'menu');
   if (name === 'menu') renderMenu();
   if (name === 'shop') { setShopTab('meta'); renderMeta(); }
+  tutorialCheck();
+}
+
+/* ══════════════════════════════════════════════════════════
+   첫 판 안내 — 저장 기록이 없던 사람에게만, 아래 7단계를 그 상황이
+   처음 생길 때 하나씩 띄운다. save.tutorial.step 은 "다음에 띄울 단계 번호"
+   (0부터 시작)이고, 그 단계가 되었을 때 when() 이 참이 되는 순간 보여준다.
+   ・ 다음  → 지금 단계만 넘기고 다음 단계로 (그 단계의 상황이 되면 또 뜬다)
+   ・ 건너뛰기 → 안내 전체를 끈다(done = true)
+   메뉴의 '안내 다시 보기'는 save.tutorial 을 초기화해 처음부터 다시 뜨게 한다. */
+const TUTORIAL_STEPS = [
+  { id: 'nexus', anchor: '#hpwrap',
+    text: '여기가 넥서스예요! 적에게 다 털리면 그 판이 끝나니, 체력(HP)을 꼭 확인해주세요.',
+    when: () => screen === 'game' && !!S },
+  { id: 'gold', anchor: '#nexusShop',
+    text: '오른쪽 목록에서 골드로 넥서스를 강화할 수 있어요. 틈틈이 눌러서 넥서스를 키워주세요!',
+    when: () => screen === 'game' && !!S },
+  { id: 'wave', anchor: '#waveChip',
+    text: '웨이브를 깨면 다음 웨이브로 넘어가요. 올라갈수록 적이 강해지니 미리미리 강화해두세요!',
+    when: () => screen === 'game' && !!S && S.wave > 1 },
+  { id: 'troopHero', anchor: '#shopTabBarrack, #shopTabHero',
+    text: "여기 '병영'과 '영웅' 탭에서 코어로 새 병력과 영웅을 해금할 수 있어요. 코어가 모이면 들러보세요!",
+    when: () => screen === 'shop' },
+  { id: 'coreMeta', anchor: '#overCore',
+    text: '판이 끝나면 코어를 받아요. 메인 화면의 "코어 상점"에서 코어로 넥서스를 영구히 강화할 수 있어요!',
+    when: () => $('over').classList.contains('on') },
+  { id: 'zone', anchor: '#zoneList',
+    text: '여기서 해금한 지역을 골라 그 지역부터 바로 출격할 수 있어요. 지역마다 시작 보너스가 달라요!',
+    when: () => $('zoneOverlay').classList.contains('on') },
+  { id: 'daily', anchor: '#dailyBtn',
+    text: '이 📅 버튼을 매일 눌러서 접속 보상과 일일 임무를 받아보세요!',
+    when: () => $('dailyBtn').classList.contains('show') },
+];
+
+function tutorialActive() {
+  return !!save.tutorial && !save.tutorial.done && save.tutorial.step < TUTORIAL_STEPS.length;
+}
+
+function tutorialClearHighlight() {
+  document.querySelectorAll('.tutHighlight').forEach(el => el.classList.remove('tutHighlight'));
+}
+
+function tutorialCheck() {
+  if (!tutorialActive()) return;
+  const step = TUTORIAL_STEPS[save.tutorial.step];
+  if (!step.when()) return;
+  const box = $('tutBubble');
+  if (box.dataset.stepId === step.id && box.classList.contains('on')) return; // 이미 같은 말풍선이 떠 있다
+  box.dataset.stepId = step.id;
+  $('tutText').textContent = step.text;
+  $('tutStepNum').textContent = `${save.tutorial.step + 1}/${TUTORIAL_STEPS.length}`;
+  box.classList.add('on');
+  tutorialClearHighlight();
+  if (step.anchor) document.querySelectorAll(step.anchor).forEach(el => el.classList.add('tutHighlight'));
+}
+
+function tutorialNext() {
+  tutorialClearHighlight();
+  $('tutBubble').classList.remove('on');
+  save.tutorial.step++;
+  if (save.tutorial.step >= TUTORIAL_STEPS.length) save.tutorial.done = true;
+  writeSave();
+  tutorialCheck();   // 다음 단계 상황이 지금 이미 참이면 바로 이어서 보여준다
+}
+
+function tutorialSkip() {
+  tutorialClearHighlight();
+  $('tutBubble').classList.remove('on');
+  save.tutorial.done = true;
+  writeSave();
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -5671,6 +5795,7 @@ function setShopTab(tab) {
   if (tab === 'special') renderSpecialMeta();
   if (tab === 'barrack') renderBarrack();
   if (tab === 'hero') renderHeroMeta();
+  tutorialCheck();
 }
 
 function renderBarrack() {
@@ -6381,6 +6506,7 @@ function syncUI() {
   }
 
   renderHeroShop(); renderNexusShop(); renderTroopShop(); renderSel(); syncTechTabs();
+  tutorialCheck();
 }
 
 /* ── 탭 ─────────────────────────────────────── */
@@ -6583,6 +6709,21 @@ $('btnCoupon').onclick = () => {
   box.style.display = open ? '' : 'none';
   if (!open) { $('couponInput').value = ''; $('couponMsg').textContent = ''; }
 };
+
+// 첫 판 안내를 처음부터 다시 보고 싶을 때 — 상태만 초기화해 두면
+// 다음에 그 상황(넥서스 화면 등)을 만났을 때 1단계부터 다시 뜬다.
+$('btnTutorialReplay').onclick = () => {
+  save.tutorial = { step: 0, done: false };
+  writeSave();
+  tutorialClearHighlight();
+  $('tutBubble').classList.remove('on');
+  const msg = $('tutorialReplayMsg');
+  msg.textContent = '안내를 처음부터 다시 보여줄게요. 다음 판부터 하나씩 떠요!';
+  setTimeout(() => { if (msg.textContent.startsWith('안내를 처음부터')) msg.textContent = ''; }, 3000);
+};
+
+$('tutBtnNext').onclick = tutorialNext;
+$('tutBtnSkip').onclick = tutorialSkip;
 
 $('btnCouponUse').onclick = () => {
   const code = $('couponInput').value.trim().toUpperCase();
@@ -6798,7 +6939,7 @@ function renderZoneList() {
   });
 }
 
-function openZones() { renderZoneList(); $('zoneOverlay').classList.add('on'); }
+function openZones() { renderZoneList(); $('zoneOverlay').classList.add('on'); tutorialCheck(); }
 function closeZones() { $('zoneOverlay').classList.remove('on'); }
 
 $('btnZones').onclick = openZones;
