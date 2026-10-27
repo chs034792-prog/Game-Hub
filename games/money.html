@@ -85,6 +85,38 @@ button{font-family:inherit;cursor:pointer}
 .qrow .rw{color:#ffd75e;font-size:11.5px}
 .qrow .ds{color:#a7a9ad;font-size:11.5px}
 
+/* ---------------- 일일 접속 보상·임무 ----------------
+   기존 자원 바(#topbar)·콘솔(#console)을 가리지 않도록, 버튼은 상단 바 버튼 줄에
+   그대로 끼워 넣고(.tb 스타일 재사용), 창은 퀘스트 창(#questOv)과 같은 "덮지 않는
+   HUD 패널" 방식으로 화면 위쪽 가운데에 둔다(전체를 덮는 .overlay가 아님). */
+#dailyBtn{position:relative}
+.ddot{position:absolute;top:-2px;right:-2px;width:8px;height:8px;border-radius:50%;background:#ff5050;border:1px solid #1d1f22}
+#dailyOv{position:absolute;left:50%;top:8px;transform:translateX(-50%);width:320px;max-height:calc(100% - 16px);overflow-y:auto;display:none;z-index:8;
+  background:rgba(8,10,14,.94);border:2px solid #8a6d2b;border-radius:8px;padding:10px 12px;font-size:12.5px;color:#d6dde3}
+#dailyOv.on{display:block}
+#dailyOv h3{margin:0 0 6px;color:#ffd75e;font-size:15px;display:flex;justify-content:space-between;align-items:center}
+#dailyOv h3 button{background:none;border:1px solid #6b6e73;color:#ddd;border-radius:4px;font-size:12px;padding:2px 8px}
+#dailyOv h4{margin:10px 0 6px;color:#ffd75e;font-size:13px}
+.streakrow{display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap}
+.streakday{flex:1;min-width:32px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 2px;border-radius:5px;
+  border:1px solid #4a4d52;background:#15171a;font-size:9px;color:#a7a9ad;text-align:center}
+.streakday b{font-size:11px;color:#f2f2f2;display:block}
+.streakday.cur{border-color:#ffd75e;background:#2b2308}
+.streakday.cur b{color:#ffd75e}
+.streakday.past{opacity:.5}
+#dLoginBtn{width:100%;margin-top:2px;border:1px solid #8a6d2b;border-radius:5px;padding:7px;font-weight:800;font-size:12.5px;
+  background:linear-gradient(180deg,#3a3d42,#1d1f22);color:#ffd75e}
+#dLoginBtn:disabled{opacity:.4;cursor:default}
+.dmission{border:1px solid #4a4d52;background:#15171a;border-radius:5px;padding:7px 9px;margin-bottom:7px}
+.dmission .dm-top{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;color:#f2f2f2}
+.dmission .dm-rw{color:#ffd75e;font-size:11px;white-space:nowrap}
+.dmission .dm-bar{height:5px;background:#0c0d0f;border:1px solid #3a3c40;border-radius:99px;overflow:hidden;margin:5px 0}
+.dmission .dm-bar i{display:block;height:100%;background:linear-gradient(90deg,#8a6d2b,#ffd75e)}
+.dmission .dm-foot{display:flex;justify-content:space-between;align-items:center;font-size:10.5px;color:#a7a9ad}
+.dmission button.claim{padding:3px 9px;font-size:10.5px;font-weight:800;border:1px solid #8a6d2b;border-radius:4px;
+  background:linear-gradient(180deg,#3a3d42,#1d1f22);color:#ffd75e}
+.dmission button.claim:disabled{opacity:.4;cursor:default}
+
 /* ---------------- 하단 콘솔 ---------------- */
 #console{height:186px;flex:none;display:flex;gap:6px;padding:6px 8px;
   background:linear-gradient(180deg,#4a4c50 0,#2c2e31 6px,#1a1b1d 100%);border-top:3px solid #6b6e73}
@@ -156,6 +188,8 @@ button{font-family:inherit;cursor:pointer}
   #kills h4,#kills .me,#kills .ips{display:none}
   #kills .row{gap:8px;line-height:1.4}
   #questOv{width:auto;right:10px}
+  #dailyOv{width:auto;left:6px;right:6px;transform:none}
+  .streakday{min-width:26px;font-size:8px}
   .msg{font-size:12px}
   .logo{font-size:40px}
   #banner{font-size:22px}
@@ -195,6 +229,7 @@ button{font-family:inherit;cursor:pointer}
     <button class="tb" id="questBtn">퀘스트 <span class="qn" id="questN">0/0</span><span class="hk"> (F9)</span></button>
     <button class="tb" id="speedBtn"><span id="speedTxt">1x</span><span class="hk"> 배속 (F)</span></button>
     <button class="tb" id="nextBtn">다음 라운드<span class="hk"> (Space)</span></button>
+    <button class="tb" id="dailyBtn" title="일일 보상">📅<span class="ddot" id="dailyDot" hidden></span></button>
     <div id="roundOrb"><div class="orb" id="orbTxt">0</div><span id="roundTxt">준비 시간</span></div>
     <div class="res" title="골드">🪙<b id="goldTxt">0</b></div>
     <div class="res" title="목재">🌲<b id="lumberTxt">0</b></div>
@@ -215,6 +250,7 @@ button{font-family:inherit;cursor:pointer}
       <div class="row ips"><span>초당 돈타워 수입</span><b id="kIps" style="color:#ffe28a">0</b></div>
     </div>
     <div id="questOv"></div>
+    <div id="dailyOv"></div>
     <div id="msgs"></div>
     <div id="banner"></div>
     <div class="overlay" id="pauseOv"><div class="ovbox"><h2>일시정지</h2>
@@ -494,6 +530,23 @@ const QUESTS = [
   { id:'interest',name:'이자 생활',     desc:'은행 이자 한 번에 1,000 이상',     check:() => G.stats.bigInterest >= 1000, reward:{l:500} },
 ];
 
+/* ---------- 일일 접속 보상 · 일일 임무 (2026-10-27 추가) ----------
+   퀘스트 22개는 한 판 안에서 깨는 중기 목표이고, 여기는 "그날 하루" 짧은 호흡의
+   반복 목표다. 보상은 전부 골드 소량 — 근거는 README "일일 접속 보상 · 일일 임무". */
+// 1~7일차 접속 보상(골드). CFG.killGold(r)=5+2r, 라운드당 몹 CFG.count=20마리 기준
+// "한 라운드를 다 잡았을 때 처치 골드 수입"과 비교해 크기를 잡았다 (README 참고).
+const DAILY_LOGIN_GOLD = [100, 140, 190, 250, 320, 400, 500];
+
+// 일일 임무 3개 — 카테고리마다 날짜 시드로 변형 하나씩 고정 선택된다.
+const DAILY_MISSION_POOL = {
+  kill:  [ { target:60,  gold:80,  label:n => `몹 ${n}마리 처치` },
+           { target:100, gold:130, label:n => `몹 ${n}마리 처치` } ],
+  round: [ { target:8,   gold:100, label:n => `${n}라운드 도달` },
+           { target:12,  gold:150, label:n => `${n}라운드 도달` } ],
+  build: [ { target:5,   gold:90,  label:n => `타워 건설·업그레이드 ${n}회` },
+           { target:8,   gold:140, label:n => `타워 건설·업그레이드 ${n}회` } ],
+};
+
 // 길 (그리드 좌표) — 좌상단 입구에서 내려와 지그재그로 중앙(오른쪽 원형 광장)까지
 const PATH = [[2,-1],[2,17],[6,17],[6,4],[10,4],[10,17],[14,17],[14,4],[18,4],[18,17],[22,17],[22,4],[26,4],[26,17],[30,17],[30,10],[33,10]];
 
@@ -501,9 +554,92 @@ const PATH = [[2,-1],[2,17],[6,17],[6,4],[10,4],[10,17],[14,17],[14,4],[18,4],[1
    저장
    ===================================================================== */
 const SAVE_KEY = 'moneydefense.v4';
-let save = { diff:'normal', best:{}, kills:{}, plays:0 };
+// 일일 보상·임무 상태 기본값. date가 오늘과 다르면 ensureDaily()가 새로 채운다.
+// 옛 세이브(이 필드가 없던 버전)를 불러와도 Object.assign으로 기본값이 채워져 깨지지 않는다.
+function freshDaily() {
+  return { date: null, streak: 0, loginClaimed: false, missions: [], pendingGold: 0 };
+}
+let save = { diff:'normal', best:{}, kills:{}, plays:0, daily: freshDaily() };
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s) save = Object.assign(save, s); } catch (e) {}
+save.daily = Object.assign(freshDaily(), save.daily || {});
+if (!Array.isArray(save.daily.missions) || save.daily.missions.length !== 3) save.daily.missions = [];
 const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} };
+
+/* ---------- 일일 보상·임무 로직 ----------
+   모두 함수 선언이라(호이스팅) 파일 내 위치와 무관하게 안전하게 호출할 수 있다. */
+function localDateKey(d) {
+  d = d || new Date();
+  // toLocaleDateString 등 로케일 포맷은 기기 설정에 따라 문자열이 달라져 날짜 비교에
+  // 쓸 수 없다. new Date()에서 년/월/일을 직접 뽑아 'YYYY-MM-DD'로 만든다.
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+function seededHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+function pickVariant(seed, arr) { return arr[seededHash(seed) % arr.length]; }
+function genDailyMissions(dateKey) {
+  return ['kill', 'round', 'build'].map(kind => {
+    const opt = pickVariant(dateKey + ':' + kind, DAILY_MISSION_POOL[kind]);
+    return { kind, target: opt.target, gold: opt.gold, label: opt.label(opt.target), progress: 0, claimed: false };
+  });
+}
+// 자정을 넘기면(로컬 날짜가 바뀌면) 스트릭을 갱신하고 그날의 임무 3개를 새로 뽑는다.
+// 어제도 왔으면 스트릭 +1(7일 넘기면 1일차로), 하루라도 걸렀으면 1일차로 리셋.
+function ensureDaily() {
+  const today = localDateKey();
+  if (save.daily.date === today) return;
+  const yesterday = localDateKey(new Date(Date.now() - 86400000));
+  save.daily.streak = (save.daily.date === yesterday) ? (save.daily.streak % 7) + 1 : 1;
+  save.daily.date = today;
+  save.daily.loginClaimed = false;
+  save.daily.missions = genDailyMissions(today);
+  persist();
+}
+let dailyDirty = false;   // 진행도는 매 처치마다 바뀔 수 있어 저장을 모아서 한다(퀘스트 1초 체크와 같은 결)
+function dailyAddProgress(kind, value) {
+  ensureDaily();
+  const m = save.daily.missions.find(x => x.kind === kind);
+  if (!m || m.claimed) return;
+  m.progress = kind === 'round' ? Math.max(m.progress, value) : m.progress + (value === undefined ? 1 : value);
+  if (m.progress > m.target) m.progress = m.target;
+  dailyDirty = true;
+}
+function dailyHasReward() {
+  ensureDaily();
+  const d = save.daily;
+  return !d.loginClaimed || d.missions.some(m => !m.claimed && m.progress >= m.target);
+}
+// 게임 안(G.gold)에 바로 넣을 수 없는 경우(메인 화면·게임 종료 후)는 pendingGold에 쌓아
+// 두고, 다음 newGame() 시작 때 한 번에 지급한다 — 골드가 "판 안에서만 존재"하는
+// 이 게임의 특성 때문에(코어·영혼 같은 영구 재화가 없다) 새로 만든 중간 저장소다.
+function grantDailyGold(amount) {
+  if (G && !G.over) {
+    G.gold += amount;
+    addFloat(G.sel ? G.sel.x : W / 2, G.sel ? G.sel.y - 30 : H / 2, `🪙 +${fmt(amount)}`, '#ffd75e');
+    msg(`일일 보상 🪙 +${fmt(amount)}`, '#ffd75e');
+  } else {
+    save.daily.pendingGold = (save.daily.pendingGold || 0) + amount;
+  }
+}
+function claimDailyLogin() {
+  ensureDaily();
+  if (save.daily.loginClaimed) return;
+  save.daily.loginClaimed = true;
+  grantDailyGold(DAILY_LOGIN_GOLD[save.daily.streak - 1] || DAILY_LOGIN_GOLD[DAILY_LOGIN_GOLD.length - 1]);
+  persist(); dailySig = ''; renderDaily();
+}
+function claimDailyMission(i) {
+  ensureDaily();
+  const m = save.daily.missions[i];
+  if (!m || m.claimed || m.progress < m.target) return;
+  m.claimed = true;
+  grantDailyGold(m.gold);
+  persist(); dailySig = ''; renderDaily();
+}
+ensureDaily();   // 스크립트 로드 시 바로 오늘 날짜로 맞춰 둬, 메인 화면에서도 스트릭·임무가 정확하다
 
 /* =====================================================================
    경로
@@ -533,9 +669,11 @@ for (let c = 0; c < 5; c++) for (let r = 0; r < 2; r++) BLOCK.add(c + ',' + r); 
    ===================================================================== */
 let G = null, UID = 1;
 function newGame() {
+  ensureDaily();
   const diff = DIFFS.find(d => d.id === save.diff) || DIFFS[1];
+  const dailyBonus = save.daily.pendingGold || 0;   // 메인 화면·게임 종료 후 받은 일일 보상 골드
   G = {
-    diff, gold: CFG.startGold, lumber: CFG.startLumber, held: false,
+    diff, gold: CFG.startGold + dailyBonus, lumber: CFG.startLumber, held: false,
     round: 0, inRound: false, queue: [], spawnT: 0, wait: CFG.firstWait,
     blds: [], units: [], grid: {}, mobs: [], shots: [], fx: [], floats: [], beams: [],
     research: Object.fromEntries(RES.map(r => [r.id, 0])), items: {}, labQueue: [],
@@ -548,10 +686,11 @@ function newGame() {
   G.sel = w;
   for (let i = 0; i < 60; i++) G.fx.push(newFlake(true));
   $('overOv').classList.remove('on'); $('pauseOv').classList.remove('on'); $('msgs').innerHTML = '';
-  $('questOv').classList.remove('on');
+  $('questOv').classList.remove('on'); $('dailyOv').classList.remove('on');
   setText($('kName'), `[${diff.name}] 나`);
-  cardSig = ''; questSig = ''; hideTip();
+  cardSig = ''; questSig = ''; dailySig = ''; hideTip();
   msg(`[${diff.name}] 일용직 노동자 옆에 돈타워를 지으세요. 첫 라운드까지 30초!`, '#ffd75e');
+  if (dailyBonus > 0) { save.daily.pendingGold = 0; persist(); msg(`일일 보상 🪙 +${fmt(dailyBonus)} 적용`, '#ffd75e'); }
 }
 const foodUsed = () => G.blds.reduce((a, b) => a + (b.def.food || 0), 0) + G.units.reduce((a, u) => a + (u.def.food || 0), 0);
 function upkeep() {
@@ -615,6 +754,7 @@ function startRound() {
   if (!G || G.inRound || G.over || fieldCount() > fieldLimit()) return;
   if (G.round > 0 && G.mobs.filter(m => !m.pig).length === 0) G.stats.clean++;
   G.round++;
+  dailyAddProgress('round', G.round);
   if (G.round > (save.best[G.diff.id] || 0)) { save.best[G.diff.id] = G.round; persist(); }
   G.inRound = true; G.wait = -1; G.spawnT = 0;
   const r = G.round, air = isAir(r), trait = traitOf(r), tr = TRAITS[trait];
@@ -799,6 +939,7 @@ function hitMob(m, dmg, src) {
 function killMob(m, src) {
   if (m.dead) return;
   m.dead = true; G.kills++;
+  dailyAddProgress('kill');
   const kg = (1 + 0.2 * G.research.bounty) * (G.items.neck ? 1.5 : 1) * incomeMul();
   let g = Math.round(CFG.killGold(m.round) * kg);
   if (m.boss) { g *= 40; G.stats.bossKills++; G.lumber += 300; G.stats.lumber += 300; msg(`보스 ${m.boss.name} 처치! +${fmt(g)} 골드 · 목재 +300`, '#ffd75e'); }
@@ -961,6 +1102,10 @@ function update(dt) {
   // 퀘스트 (1초마다)
   G.qT = (G.qT || 0) - dt;
   if (G.qT <= 0) { G.qT = 1; checkQuests(); }
+  // 일일 보상·임무 — 자정을 넘기는 경우 대비(날짜 재확인) + 진행도 저장 플러시(3초마다,
+  // 처치마다 localStorage에 쓰면 전투 중 끊길 수 있어 모아서 쓴다)
+  G.dailyT = (G.dailyT || 0) - dt;
+  if (G.dailyT <= 0) { G.dailyT = 3; ensureDaily(); if (dailyDirty) { dailyDirty = false; persist(); } }
 }
 function impact(s, t) {
   const d = s.src.def, src = s.src;
@@ -1070,6 +1215,7 @@ function tryBuild(id, c, r) {
               buildLeft: d.build, buildTotal: d.build, mode: 'mob', kills: 0, invested: d.cost.g || 0 };
   G.blds.push(b); G.grid[cellKey(c, r)] = b;
   burst(b.x, b.y, '#d9c7a0', 8);
+  dailyAddProgress('build');
   return true;
 }
 function upgradeBld(b, toId) {
@@ -1078,12 +1224,14 @@ function upgradeBld(b, toId) {
   const why = afford(cost, Math.max(0, (nd.food || 0) - (b.def.food || 0))); if (why) { msg(why, '#ffd75e'); return; }
   pay(cost); b.invested += cost.g || 0;
   b.upTo = toId; b.buildLeft = nd.build || 4; b.buildTotal = b.buildLeft;
+  dailyAddProgress('build');
   cardSig = '';
 }
 function upgradeUnit(u) {
   const d = u.def; if (!d.next) return;
   const c = upCost(d.up), why = afford(c); if (why) { msg(why, '#ffd75e'); return; }
   pay(c); u.def = D[d.next]; u.base = d.next; u.hp = u.def.hp;
+  dailyAddProgress('build');
   msg(`${u.def.name}(으)로 업그레이드!`, '#46e05a'); burst(u.x, u.y, '#6fd6ff', 20); cardSig = '';
 }
 function sellBld(b) {
@@ -1470,6 +1618,42 @@ function renderQuests() {
 }
 function toggleQuests() { $('questOv').classList.toggle('on'); questSig = ''; }
 
+let dailySig = '';
+function renderDaily() {
+  const dot = $('dailyDot'); if (dot) dot.hidden = !dailyHasReward();
+  const ov = $('dailyOv'); if (!ov.classList.contains('on')) return;
+  const sig = JSON.stringify(save.daily);
+  if (sig === dailySig) return; dailySig = sig;
+  const d = save.daily;
+  const rows = [];
+  for (let i = 1; i <= 7; i++) {
+    rows.push(`<div class="streakday ${i === d.streak ? 'cur' : i < d.streak ? 'past' : ''}"><span>${i}일</span><b>🪙${fmt(DAILY_LOGIN_GOLD[i - 1])}</b></div>`);
+  }
+  const missionsHtml = d.missions.map((m, i) => {
+    const done = m.progress >= m.target;
+    return `<div class="dmission">
+      <div class="dm-top"><span>${m.label}</span><span class="dm-rw">🪙 ${fmt(m.gold)}</span></div>
+      <div class="dm-bar"><i style="width:${Math.min(100, Math.round(m.progress / m.target * 100))}%"></i></div>
+      <div class="dm-foot"><span>${Math.min(m.progress, m.target)} / ${m.target}</span>${m.claimed ? '<span>수령 완료</span>' : `<button class="claim" data-i="${i}" ${done ? '' : 'disabled'}>받기</button>`}</div>
+    </div>`;
+  }).join('');
+  ov.innerHTML = `<h3><span>📅 일일 보상</span><button id="dailyCloseBtn">✕</button></h3>
+    <h4>접속 보상 — 연속 ${d.streak}일차</h4>
+    <div class="streakrow">${rows.join('')}</div>
+    <button id="dLoginBtn" ${d.loginClaimed ? 'disabled' : ''}>${d.loginClaimed ? '오늘 수령 완료' : '받기'}</button>
+    <h4>오늘의 임무</h4>
+    ${missionsHtml}`;
+  $('dailyCloseBtn').onclick = () => toggleDaily(false);
+  $('dLoginBtn').onclick = claimDailyLogin;
+  ov.querySelectorAll('button.claim').forEach(b => { b.onclick = () => claimDailyMission(+b.dataset.i); });
+}
+function toggleDaily(v) {
+  ensureDaily();
+  const ov = $('dailyOv');
+  ov.classList.toggle('on', v === undefined ? !ov.classList.contains('on') : v);
+  dailySig = ''; renderDaily();
+}
+
 function refreshUI() {
   setText($('goldTxt'), fmt(G.gold));
   setText($('lumberTxt'), fmt(G.lumber));
@@ -1495,6 +1679,7 @@ function refreshUI() {
   if (G.buff.overtime > 0) bl.push(`🌙 야근 수당 ${Math.ceil(G.buff.overtime)}초`);
   setHTML($('buffs'), $('questOv').classList.contains('on') ? '' : bl.map(t => `<div class="buff">${t}</div>`).join(''));
   renderQuests();
+  renderDaily();
 
   const s = G.sel;
   let icon = '👷', name = '', body = '', extra = '', hpT = '', mpT = '', prg = null;
@@ -1612,6 +1797,7 @@ window.addEventListener('keydown', ev => {
 $('goBtn').onclick = () => { newGame(); show('game'); };
 $('menuBtn').onclick = () => togglePause();
 $('questBtn').onclick = () => toggleQuests();
+$('dailyBtn').onclick = () => toggleDaily();
 $('speedBtn').onclick = () => { G.speed = G.speed >= 3 ? 1 : G.speed + 1; };
 $('nextBtn').onclick = () => { if (!G.inRound) startRound(); };
 $('resumeBtn').onclick = () => togglePause(false);
