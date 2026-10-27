@@ -650,6 +650,75 @@
     background: #f0abfc; color: #2a0b33; font-size: 11px; font-weight: 800; vertical-align: 1px;
   }
   .badge:empty { display: none; }
+
+  /* ── 일일 접속 보상 + 일일 임무 ─────────────────────── */
+  /* 메인 화면에서만 보이는 작은 코너 버튼. show()가 화면을 메뉴로 바꿀 때만
+     .show 를 붙여 띄운다 — 다른 화면(상점·전장)에서는 항상 숨긴다. */
+  .dailybtn {
+    display: none;
+    position: fixed; top: 14px; right: 14px; z-index: 40;
+    width: 44px; height: 44px; padding: 0; border-radius: 50%;
+    font-size: 19px; line-height: 1;
+    background: linear-gradient(180deg, #243454, #141c30);
+    border: 1px solid var(--line-strong); box-shadow: var(--sh-2), var(--hair);
+  }
+  .dailybtn.show { display: flex; align-items: center; justify-content: center; }
+  .dailydot {
+    position: absolute; top: 4px; right: 4px;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #ff5c7a; box-shadow: 0 0 6px rgba(255,92,122,.8);
+  }
+  @media (max-width: 480px) {
+    .dailybtn { width: 38px; height: 38px; font-size: 16px; top: 10px; right: 10px; }
+  }
+
+  #dailyOverlay {
+    display: none; position: fixed; inset: 0; z-index: 999;
+    background: rgba(6,8,16,.78); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    justify-content: center; align-items: center; padding: 12px;
+  }
+  #dailyOverlay.on { display: flex; }
+  #dailyBox {
+    width: 100%; max-width: 380px; max-height: 92vh; overflow-y: auto;
+    background: linear-gradient(180deg, #151d31, #101725);
+    border: 1px solid var(--line-strong); border-radius: var(--r-lg); padding: 18px 16px;
+    box-shadow: var(--sh-3), var(--hair);
+  }
+  #dailyBox h2 { font-size: 20px; font-weight: 800; text-align: center; letter-spacing: .04em; }
+  #dailyBox h3 { font-size: 13px; font-weight: 700; margin: 16px 0 8px; color: var(--text-dim); letter-spacing: .02em; }
+  #dailyBox h3:first-of-type { margin-top: 10px; }
+  .streakrow { display: flex; gap: 6px; flex-wrap: wrap; }
+  .streakday {
+    flex: 1; min-width: 42px; text-align: center; padding: 7px 2px;
+    border: 1px solid var(--line); border-radius: var(--r-sm);
+    background: rgba(255,255,255,.02); font-size: 10.5px; color: var(--text-mute);
+  }
+  .streakday .sd-n { display: block; font-size: 11px; font-weight: 700; color: var(--text); }
+  .streakday.cur { border-color: var(--gold); background: rgba(255,212,94,.1); }
+  .streakday.cur .sd-n { color: var(--gold); }
+  .streakday.past { opacity: .5; }
+  #btnDailyLogin { width: 100%; margin-top: 10px; }
+  .dmission {
+    display: flex; align-items: center; gap: 10px;
+    background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.012)), var(--surface);
+    border: 1px solid var(--line); border-radius: var(--r-md); padding: 11px 13px;
+    margin-bottom: 8px;
+  }
+  .dmission.done { border-color: rgba(74,222,128,.4); }
+  .dmission .info { flex: 1; min-width: 0; }
+  .dmission .nm { font-size: 13px; font-weight: 700; }
+  .dmission .ds { font-size: 11.5px; color: var(--text-dim); margin-top: 2px; }
+  .dmission .dbar {
+    height: 6px; border-radius: 999px; background: var(--surface-sunk);
+    margin-top: 6px; overflow: hidden;
+  }
+  .dmission .dbar-fill { height: 100%; background: var(--brand); border-radius: 999px; transition: width .2s; }
+  .dmission button { flex-shrink: 0; width: auto; min-width: 64px; padding: 9px 10px; font-size: 12.5px; }
+  #dailyLottoInfo {
+    text-align: center; margin: 14px 0 8px; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: var(--r-md);
+    background: rgba(240,171,252,.06); font-size: 12px; color: var(--text-dim);
+  }
 </style>
 </head>
 <body>
@@ -854,6 +923,26 @@
 </div>
 
 </div>
+</div>
+
+<!-- 일일 접속 보상 + 일일 임무 — 메인 화면에서만 보이는 작은 코너 버튼.
+     기존 버튼 줄(복권·코드 관리·지역 정보 등)과 겹치지 않게 화면 구석에 고정하고,
+     show()가 화면을 바꿀 때 .show 클래스로만 보였다 사라졌다 한다. -->
+<button class="dailybtn" id="dailyBtn" aria-label="일일 보상 열기">📅<span class="dailydot" id="dailyDot" hidden></span></button>
+
+<!-- ── 일일 보상 오버레이 ─────────────────────── -->
+<div id="dailyOverlay">
+  <div id="dailyBox">
+    <h2>📅 일일 보상</h2>
+    <h3>접속 보상 — 연속 <span id="dailyStreakNum">1</span>일차</h3>
+    <div class="streakrow" id="dailyStreakRow"></div>
+    <button id="btnDailyLogin">받기</button>
+    <h3>오늘의 임무</h3>
+    <div id="dailyMissions"></div>
+    <p class="hint" id="dailyLottoInfo"></p>
+    <button class="ghost" id="btnDailyToLotto" style="width:100%">복권 창으로 이동 →</button>
+    <button class="ghost" id="btnDailyClose" style="width:100%;margin-top:10px">닫기</button>
+  </div>
 </div>
 
 <!-- ── 지역 정보 오버레이 ─────────────────────── -->
@@ -1878,6 +1967,156 @@ function normLotto(o) {
            bought: n('bought'), spent: n('spent'), won: n('won'), best: n('best') };
 }
 
+/* ── 일일 접속 보상 + 일일 임무 ────────────────────────
+   매일 자정(로컬 날짜)에 접속 보상 1회 + 임무 3개가 새로 열린다. 기존 '무료
+   복권 매일 1장'(위 LOTTO_* 참고)은 그대로 두고 건드리지 않으며, 이 보상은
+   전부 코어(소량)로만 준다 — 같은 날 중복으로 재화를 주는 장치를 두 개
+   만들지 않기 위함이다. 날짜 판정은 new Date()에서 년/월/일을 직접 뽑아
+   'YYYY-MM-DD'로 비교한다(toLocaleDateString은 기기 설정에 따라 포맷이
+   달라져 비교에 쓸 수 없다). */
+function localDateKey(d = new Date()) {
+  const y = d.getFullYear(), m = d.getMonth() + 1, day = d.getDate();
+  return `${y}-${String(m).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+// 날짜 문자열을 시드로 쓰는 간단한 해시 — 같은 날이면 항상 같은 조합이 나오고,
+// 재접속해도 바뀌지 않는다(Math.random이면 매번 달라져 '오늘의 임무'가 무의미해진다).
+function seededIndex(key, mod) {
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return h % mod;
+}
+
+/* 접속 보상 — 연속 접속일(스트릭) 1~7일차, 7일을 넘기면 1일차부터 다시 돈다.
+   한 판을 깨서 받는 코어(coreReward, 웨이브10 클리어=199)보다 항상 작게 잡아
+   "판 하나 깨는 것보다 작은 소량"을 지킨다. 근거는 README "일일 접속 보상" 참고. */
+const DAILY_LOGIN_REWARDS = [30, 50, 80, 120, 170, 230, 320];   // 1~7일차 코어
+
+/* 일일 임무 풀 — 날짜를 시드로 변형 하나씩 뽑는다(날마다 난이도가 살짝 달라진다).
+   '웨이브 N 도달'은 고정 풀이 아니라 그날의 최고 웨이브에 비례해 즉석에서
+   만든다(dailyWaveTarget). '유닛 고용 또는 강화'는 영웅 강화·넥서스 강화·
+   병영 구매·일반/특수강화 구매를 모두 act 로 센다. */
+const DAILY_MISSION_POOL = {
+  sortie: [
+    { target: 1, cores: 40, label: n => `오늘 ${n}판 출격` },
+    { target: 2, cores: 70, label: n => `오늘 ${n}판 출격` },
+  ],
+  act: [
+    { target: 5, cores: 60,  label: n => `유닛 고용 또는 강화 ${n}회` },
+    { target: 8, cores: 100, label: n => `유닛 고용 또는 강화 ${n}회` },
+  ],
+};
+
+/* 웨이브 도달 임무 — 최고 웨이브의 50% 또는 70%(날짜 시드로 둘 중 하나)를
+   10단위로 내려 그날의 목표로 삼는다. 처음 하루(최고 웨이브 0)는 10으로 둔다.
+   보상은 그 웨이브를 실제로 클리어했을 때 받는 코어(coreReward)의 15%뿐이다 —
+   어차피 그 판을 깨면 진짜 보상은 따로 받으므로 이 임무는 덤일 뿐이다. */
+function dailyWaveTarget(dateKey, best) {
+  const frac = [0.5, 0.7][seededIndex(dateKey + 'w', 2)];
+  return Math.max(10, Math.round(best * frac / 10) * 10);
+}
+const dailyWaveReward = target => Math.max(20, Math.round(coreReward(target) * 0.15 / 10) * 10);
+
+function genDailyMissions(dateKey, best) {
+  const sortie = DAILY_MISSION_POOL.sortie[seededIndex(dateKey + 's', DAILY_MISSION_POOL.sortie.length)];
+  const act = DAILY_MISSION_POOL.act[seededIndex(dateKey + 'a', DAILY_MISSION_POOL.act.length)];
+  const waveTarget = dailyWaveTarget(dateKey, best);
+  // 특수 코어는 전직용으로 귀해서, 5일에 한 번꼴로만 '유닛' 임무에 1개를 얹어준다.
+  const giveSpecial = seededIndex(dateKey + 'sp', 5) === 0;
+  return [
+    { id: 'sortie', kind: 'sortie', target: sortie.target, progress: 0, claimed: false,
+      reward: { cores: sortie.cores, specialCores: 0 }, label: sortie.label(sortie.target) },
+    { id: 'wave', kind: 'wave', target: waveTarget, progress: 0, claimed: false,
+      reward: { cores: dailyWaveReward(waveTarget), specialCores: 0 }, label: `웨이브 ${waveTarget} 도달` },
+    { id: 'act', kind: 'act', target: act.target, progress: 0, claimed: false,
+      reward: { cores: act.cores, specialCores: giveSpecial ? 1 : 0 }, label: act.label(act.target) },
+  ];
+}
+
+// 저장·백업 코드에서 읽은 값을 믿지 않고 형태를 맞춘다 (normLotto와 같은 역할)
+function normDaily(o) {
+  const src = (o && typeof o === 'object') ? o : {};
+  const missions = Array.isArray(src.missions) ? src.missions.slice(0, 3).map(m => {
+    const r = (m && typeof m === 'object' && m.reward) || {};
+    return {
+      id: String((m && m.id) || ''), kind: String((m && m.kind) || ''),
+      target: Math.max(1, Math.floor(+(m && m.target)) || 1),
+      progress: Math.max(0, Math.floor(+(m && m.progress)) || 0),
+      claimed: !!(m && m.claimed),
+      reward: { cores: Math.max(0, Math.floor(+r.cores) || 0),
+                specialCores: Math.max(0, Math.floor(+r.specialCores) || 0) },
+      label: String((m && m.label) || ''),
+    };
+  }) : [];
+  return {
+    date: typeof src.date === 'string' ? src.date : '',
+    streak: Math.max(0, Math.min(7, Math.floor(+src.streak) || 0)),
+    loginClaimed: !!src.loginClaimed,
+    missions,
+  };
+}
+
+/* 날짜가 바뀌었는지 보고, 바뀌었으면 스트릭과 오늘의 임무 3개를 새로 만든다.
+   어제까지 활성이었으면(연속 접속) 스트릭을 1~7 사이에서 한 칸 올리고, 하루라도
+   걸렀거나 처음이면 1로 되돌린다. 운영자 모드에서도 호출 자체는 막지 않지만
+   (화면에 정상적으로 표시되어야 하므로), 진행도 집계와 보상 수령은
+   dailyAddProgress/claimDailyLogin/claimDailyMission 쪽에서 DEV 로 막는다 —
+   실제 기록이 오염되지 않게 하는 기존 realCores 원칙과 같은 이유다. */
+function ensureDaily() {
+  const today = localDateKey();
+  if (save.daily.date === today) return;
+  const prevDate = save.daily.date;
+  const yesterday = localDateKey(new Date(Date.now() - 86400000));
+  save.daily.streak = prevDate === yesterday ? (save.daily.streak % 7) + 1 : 1;
+  save.daily.date = today;
+  save.daily.loginClaimed = false;
+  save.daily.missions = genDailyMissions(today, save.best);
+  writeSave();
+}
+
+/* 임무 진행도를 더한다. kind가 'wave'인 임무는 '적어도 N까지 도달'이므로
+   더하지 않고 최댓값만 갱신하고, 나머지는 누적으로 더한다. */
+function dailyAddProgress(kind, amt = 1) {
+  if (DEV || !save.daily.missions.length) return;
+  let changed = false;
+  for (const m of save.daily.missions) {
+    if (m.kind !== kind || m.claimed) continue;
+    const next = kind === 'wave'
+      ? Math.max(m.progress, Math.min(m.target, Math.floor(amt)))
+      : Math.min(m.target, m.progress + amt);
+    if (next !== m.progress) { m.progress = next; changed = true; }
+  }
+  if (changed) writeSave();
+}
+
+// 📅 버튼에 점을 띄울지 — 접속 보상을 안 받았거나, 완료됐지만 아직 못 받은 임무가 있으면 켠다
+function dailyHasReward() {
+  if (!save.daily.loginClaimed) return true;
+  return save.daily.missions.some(m => !m.claimed && m.progress >= m.target);
+}
+
+function claimDailyLogin() {
+  if (DEV || save.daily.loginClaimed) return;
+  const cores = DAILY_LOGIN_REWARDS[save.daily.streak - 1] || DAILY_LOGIN_REWARDS[0];
+  save.cores += cores;
+  save.daily.loginClaimed = true;
+  writeSave();
+  if (typeof renderDaily === 'function') renderDaily();
+  renderMenu();
+}
+
+function claimDailyMission(id) {
+  if (DEV) return;
+  const m = save.daily.missions.find(x => x.id === id);
+  if (!m || m.claimed || m.progress < m.target) return;
+  m.claimed = true;
+  save.cores += m.reward.cores || 0;
+  save.specialCores += m.reward.specialCores || 0;
+  writeSave();
+  if (typeof renderDaily === 'function') renderDaily();
+  renderMenu();
+}
+
 /* 저장 데이터 보정 — 밸런스를 크게 바꿀 때 기존 플레이어 기록을 한 번만 손본다.
    save.mig 에 적용된 단계를 남겨서 같은 보정이 두 번 걸리지 않게 한다. */
 const MIGRATION = 4;              // 1: 강화 증가폭 절반화에 맞춰 코어를 1/10 로
@@ -1922,6 +2161,7 @@ function loadSave() {
   }
   if (!Array.isArray(save.coupons)) save.coupons = [];
   save.lotto = normLotto(save.lotto);
+  save.daily = normDaily(save.daily);
   const old = +(localStorage.getItem('nexusdefense.best') || 0);
   if (old > save.best) save.best = old;
   const stale = (save.mig || 0) < MIGRATION;
@@ -1958,11 +2198,14 @@ function forceAdminGold() { if (DEV && S && S.phase !== 'over') S.gold = ADMIN_G
    옮기게 한다. UTF-8 을 거쳐 base64 로 만든다(한글이 없어도 안전하게). */
 function exportSave() {
   // mig 을 같이 실어야, 옮긴 브라우저에서 같은 보정이 또 걸리지 않는다
+  // daily(접속 스트릭·오늘 임무)도 실어야 기기를 옮겨도 스트릭이 끊기지 않는다 —
+  // 단, 두 기기의 로컬 날짜(시간대)가 다르면 ensureDaily가 "연속 접속"으로
+  // 인정하지 못해 스트릭이 1로 리셋될 수 있다(README "일일 접속 보상" 한계 참고).
   const body = JSON.stringify({ v: 2, best: save.best,
                                 cores: DEV ? realCores : save.cores,
                                 specialCores: save.specialCores || 0,
                                 runs: save.runs, meta: save.meta, mig: save.mig || 0,
-                                coupons: save.coupons || [], lotto: save.lotto });
+                                coupons: save.coupons || [], lotto: save.lotto, daily: save.daily });
   return btoa(String.fromCharCode(...new TextEncoder().encode(body)));
 }
 
@@ -2005,6 +2248,7 @@ function importSave(code) {
   // 옛 코드(v1)는 보정 전 값이라 여기서 한 번 깎인다
   save.coupons = Array.isArray(d.coupons) ? d.coupons : [];
   save.lotto = normLotto(d.lotto);
+  save.daily = normDaily(d.daily);
   save.mig = Math.max(0, +d.mig || 0);
   migrate();
   realCores = save.cores;          // 불러온 값이 운영자 모드에 덮이지 않게 한다
@@ -2206,6 +2450,8 @@ function show(name, fromPop) {
   screen = name;
   for (const id of ['menu', 'shopScreen', 'gameScreen'])
     $(id).classList.toggle('on', (id === 'gameScreen' ? 'game' : id === 'shopScreen' ? 'shop' : 'menu') === name);
+  // 일일 보상 버튼은 메인 화면에서만 — 상점·전장 화면에서는 가린다
+  $('dailyBtn').classList.toggle('show', name === 'menu');
   if (name === 'menu') renderMenu();
   if (name === 'shop') { setShopTab('meta'); renderMeta(); }
 }
@@ -2357,6 +2603,7 @@ function hire(def) {
     recoil: 0, spawnT: 0.6,
   });
   S.hired++;
+  dailyAddProgress('act');
   addText(post.x, post.y - 24, def.name + ' 배치', def.accent);
   saveRun();
   syncUI();
@@ -2446,6 +2693,7 @@ function endWave() {
   addText(CX, CY - 70, '+' + bonus + ' 클리어 보너스', '#ffd45e');
   S.wave++;
   if (S.wave - 1 > save.best) { save.best = S.wave - 1; submitRanking(); }
+  dailyAddProgress('wave', S.wave - 1);   // 오늘의 '웨이브 도달' 임무 — 방금 넘은 웨이브 기준
   // 최고 기록을 갱신하지 않는 판이라도 영웅 경험치는 웨이브마다 남긴다.
   // 판 도중에 강제로 꺼도 다음 출격에서 되돌아가지 않게 하기 위함이다.
   writeSave();
@@ -5358,6 +5606,9 @@ function renderMenu() {
   // 무료 복권이 있으면 메인 버튼에 장수를 띄운다
   lottoRefill();
   $('lottoBadge').textContent = save.lotto.tickets > 0 ? save.lotto.tickets : '';
+  // 일일 접속 보상 + 임무 — 날짜가 바뀌었으면 갈아 끼우고, 받을 보상이 있으면 📅에 점을 띄운다
+  ensureDaily();
+  $('dailyDot').hidden = !dailyHasReward();
 }
 
 /* 일반강화와 특수강화는 같은 META 목록을 special 표시로 갈라 쓴다.
@@ -5385,6 +5636,7 @@ function renderMetaList(listId, items, rerender) {
       const lv = mlv(m.id), c = metaCost(m, lv);
       if (lv >= m.max || save.cores < c) return;
       save.cores -= c; save.meta[m.id] = lv + 1;
+      dailyAddProgress('act');
       writeSave(); rerender();
     };
   });
@@ -5498,6 +5750,7 @@ function renderBarrack() {
       const lv = mlv(m.id), c = metaCost(m, lv);
       if (lv >= m.max || save.cores < c) return;
       save.cores -= c; save.meta[m.id] = lv + 1;
+      dailyAddProgress('act');
       writeSave(); renderBarrack();
     };
   });
@@ -5511,6 +5764,7 @@ function renderBarrack() {
       save.cores -= cost;
       save.meta.troops[id] = troopOwned(id) + 1;
       if (troopTotalDeploy() < maxPopFor(mlv('m_pop'))) setTroopDeploy(id, troopDeploy(id) + 1);
+      dailyAddProgress('act');
       writeSave(); renderBarrack();
     };
   });
@@ -5820,6 +6074,7 @@ function buyHeroUp() {
   const c = heroUpCost(S.heroUpLv);
   if (S.gold < c) return;
   S.gold -= c; S.heroUpLv++; S.dmgMul += HERO_UP.step;
+  dailyAddProgress('act');
   addText(CX, CY - 88, `영웅 공격력 ×${S.dmgMul.toFixed(2)}`, '#ff8a50');
   saveRun();
   syncUI();
@@ -5930,6 +6185,7 @@ function buyNexusUp(id) {
   const c = u.cost(lv);
   if (S.gold < c) return;
   S.gold -= c; S.nexusLv[u.id]++; u.apply(S);
+  dailyAddProgress('act');
   addText(CX, CY - 88, u.once ? u.name + ' 해금' : u.name + ' Lv.' + S.nexusLv[u.id], '#7fe7ff');
   saveRun();
   syncUI();
@@ -5953,6 +6209,7 @@ function buyNexusUpMax(id) {
     bought++;
   }
   if (!bought) return;
+  dailyAddProgress('act', bought);
   addText(CX, CY - 88, `${u.name} Lv.${S.nexusLv[u.id]} (+${bought})`, '#86efac');
   saveRun();
   syncUI();
@@ -6301,6 +6558,7 @@ $('btnSortie').onclick = () => {
   const run = readRun();
   if (run && !confirm(`이어할 수 있는 판(웨이브 ${run.wave})이 있습니다.\n새로 시작하면 그 판은 사라집니다. 계속할까요?`)) return;
   newGame(getSelectedZoneFrom()); setTab('nexus'); show('game');
+  dailyAddProgress('sortie');   // '오늘 N판 출격' 임무 — 이어하기(btnContinue)는 새 출격이 아니므로 세지 않는다
 };
 $('btnContinue').onclick = () => {
   const run = readRun();
@@ -6468,6 +6726,56 @@ $('btnLottoClose').onclick = closeLotto;
 $('lottoOverlay').onclick = e => { if (e.target === $('lottoOverlay')) closeLotto(); };
 $('btnLottoFree').onclick = () => lottoDraw(lottoFreeValue(), true);
 
+/* ── 일일 보상 화면 ────────────────────────────────────
+   데이터·집계 로직은 위쪽 '일일 접속 보상 + 일일 임무' 구역에 있다. 여기는
+   패널을 그리고 버튼을 잇는 부분만 다룬다. */
+function renderDaily() {
+  ensureDaily();
+  const d = save.daily;
+  $('dailyStreakNum').textContent = d.streak;
+  $('dailyStreakRow').innerHTML = DAILY_LOGIN_REWARDS.map((cores, i) => {
+    const n = i + 1;
+    const cls = n === d.streak ? 'cur' : n < d.streak ? 'past' : '';
+    return `<div class="streakday ${cls}"><span class="sd-n">${n}일</span><span>+${cores}</span></div>`;
+  }).join('');
+
+  const loginBtn = $('btnDailyLogin');
+  loginBtn.disabled = DEV || d.loginClaimed;
+  loginBtn.textContent = DEV ? '운영자 모드에서는 받을 수 없음'
+    : d.loginClaimed ? '오늘 접속 보상 받음' : `받기 (코어 +${DAILY_LOGIN_REWARDS[d.streak - 1]})`;
+
+  $('dailyMissions').innerHTML = d.missions.map(m => {
+    const done = m.progress >= m.target;
+    const pct = Math.min(100, Math.round(m.progress / m.target * 100));
+    const rewardTxt = `코어 +${m.reward.cores}` + (m.reward.specialCores ? ` · 특수 코어 +${m.reward.specialCores}` : '');
+    return `<div class="dmission ${m.claimed ? 'done' : ''}">
+      <div class="info">
+        <div class="nm">${m.label}</div>
+        <div class="ds">${rewardTxt}</div>
+        <div class="dbar"><div class="dbar-fill" style="width:${pct}%"></div></div>
+        <div class="ds" style="margin-top:2px">${Math.min(m.progress, m.target)} / ${m.target}</div>
+      </div>
+      <button data-dm="${m.id}" ${DEV || m.claimed || !done ? 'disabled' : ''}>
+        ${m.claimed ? '받음' : done ? '받기' : '진행중'}
+      </button>
+    </div>`;
+  }).join('');
+  $('dailyMissions').querySelectorAll('button[data-dm]').forEach(el => {
+    el.onclick = () => claimDailyMission(el.dataset.dm);
+  });
+
+  $('dailyLottoInfo').textContent = `무료 복권 ${save.lotto.tickets}장 보유 중 — 매일 1장 + 100웨이브 돌파마다 1장(별개 보상입니다)`;
+}
+
+function openDaily() { renderDaily(); $('dailyOverlay').classList.add('on'); }
+function closeDaily() { $('dailyOverlay').classList.remove('on'); renderMenu(); }
+
+$('dailyBtn').onclick = openDaily;
+$('btnDailyClose').onclick = closeDaily;
+$('dailyOverlay').onclick = e => { if (e.target === $('dailyOverlay')) closeDaily(); };
+$('btnDailyLogin').onclick = claimDailyLogin;
+$('btnDailyToLotto').onclick = () => { closeDaily(); openLotto(); };
+
 function renderZoneList() {
   const selected = getSelectedZoneFrom();
   $('zoneList').innerHTML = ZONES.map(z => {
@@ -6592,6 +6900,10 @@ function tick(dt) {
 }
 
 let uiTick = 0;
+// 메뉴로 돌아가지 않고 한 판을 계속하다 자정을 넘기는 경우를 대비해, 화면과
+// 무관하게 몇 초마다 날짜가 바뀌었는지 본다(그래야 다음 날 웨이브 진행도가
+// 어제 임무에 잘못 더해지지 않는다).
+let dailyCheckT = 0;
 function loop(ts) {
   const raw = Math.min(0.05, (ts - last) / 1000 || 0);
   last = ts;
@@ -6601,6 +6913,12 @@ function loop(ts) {
     draw();
     uiTick += raw;
     if (uiTick > 0.12) { uiTick = 0; if (S.phase !== 'over') syncUI(); }
+  }
+  dailyCheckT += raw;
+  if (dailyCheckT > 5) {
+    dailyCheckT = 0;
+    ensureDaily();
+    $('dailyDot').hidden = !dailyHasReward();
   }
   requestAnimationFrame(loop);
 }
