@@ -92,6 +92,7 @@ python -m http.server
 
 | 팀 | 직원 | 결과물 |
 |---|---|---|
+| 팀장 | `gamehub-team-lead` | 일 배분·취합, 최종검토 제출 |
 | 프로그래밍팀 (구현) | `gamehub-dev-hub`, `gamehub-dev-gameplay` | 허브·게임 코드 |
 | QA팀 (검증) | `gamehub-qa-functional`, `gamehub-qa-compat` | [QA/](QA/README.md) |
 | 시나리오팀 | `gamehub-scenario-writer`, `gamehub-scenario-director` | [시나리오/](시나리오/README.md) |
