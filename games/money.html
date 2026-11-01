@@ -18,6 +18,8 @@ button{font-family:inherit;cursor:pointer}
 /* ---------------- 메인 ---------------- */
 #menu{flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:16px;overflow-y:auto;
   background:radial-gradient(ellipse at 50% 35%,#24343f 0%,#0b1015 60%,#05070a 100%)}
+/* 규칙 글 접기/펼치기 버튼 — 기본은 숨김(PC), 터치 기기에서만 보인다 (아래 pointer:coarse 참고) */
+.tglRules{display:none}
 .logo{font-size:58px;font-weight:900;letter-spacing:1px;text-align:center;line-height:1.05;
   background:linear-gradient(180deg,#fff2b0,#f5c542 45%,#b07a10);-webkit-background-clip:text;background-clip:text;color:transparent;
   filter:drop-shadow(0 3px 0 #3a2804)}
@@ -182,7 +184,7 @@ button{font-family:inherit;cursor:pointer}
 .ovbtns{display:flex;gap:10px;justify-content:center}
 .ovbtns button{border:1px solid #8a6d2b;border-radius:6px;padding:9px 22px;font-weight:800;font-size:15px;background:linear-gradient(180deg,#3a3d42,#1d1f22);color:#ffd75e}
 
-@media (max-width:900px){
+@media (max-width:900px), (pointer:coarse){
   #console{height:auto;flex-wrap:wrap}
   #mmWrap{width:160px;height:110px}
   #portrait{width:90px}
@@ -216,6 +218,33 @@ button{font-family:inherit;cursor:pointer}
   .logo{font-size:40px}
   #banner{font-size:22px}
 }
+
+/* ---------------- 터치(휴대폰) 전용 ----------------
+   PC(마우스)는 pointer:coarse 가 아니므로 이 블록은 전혀 적용되지 않는다.
+   - 시작 화면: 세로 가운데 정렬 때문에 내용이 길면 위가 잘리던 것을 위에서부터 배치로 바꾼다.
+   - 규칙 글 6문단은 기본 접고 "규칙 보기" 버튼으로 펼친다 (.tglRules·.howto.open 은 JS에서 토글).
+   - 게임 화면: 아래 콘솔(미니맵·초상화·명령 카드)을 더 압축해 맵(#stage) 영역을 넓힌다.
+   - 단축키 표기((F10)(F9)(F)(Space))는 터치에서 숨긴다 — 바로 위 결합 미디어쿼리의 .tb .hk 규칙이 처리한다. */
+@media (pointer:coarse){
+  #menu{justify-content:flex-start;padding-top:20px}
+  .tglRules{display:inline-block;background:rgba(20,26,32,.9);border:1px solid #4a4f57;border-radius:8px;
+    color:#d6dde3;padding:7px 16px;font-size:13px;font-weight:700}
+  .howto{display:none}
+  .howto.open{display:block}
+
+  #console{height:112px;flex-wrap:nowrap}
+  #mmWrap{width:92px;height:100%}
+  #portrait{width:52px}
+  #pIcon{font-size:30px}
+  #pHp,#pMp{font-size:10px}
+  #card{width:auto;flex:1;height:100%;gap:3px;padding:4px}
+  .cmd{font-size:18px;touch-action:manipulation}
+  #info{padding:4px 8px}
+  #iName{font-size:12px;margin-bottom:3px}
+  #iBody{font-size:10px;gap:2px 6px}
+  #iExtra{font-size:10px}
+  #cv{touch-action:none}
+}
 </style>
 </head>
 <body>
@@ -236,7 +265,8 @@ button{font-family:inherit;cursor:pointer}
     <button class="big" id="goBtn">게임 시작</button>
     <button class="big" id="shopBtn" style="font-size:15px;padding:12px 22px;background:linear-gradient(180deg,#3a3d42,#1d1f22);color:#ffd75e;border:2px solid #8a6d2b;box-shadow:none">🧧 강화 상점</button>
   </div>
-  <div class="howto">
+  <button type="button" class="tglRules" id="rulesBtn">📜 규칙 보기 ▾</button>
+  <div class="howto" id="howto">
     ① <b>일용직 노동자</b> 옆에 <b>돈타워</b>를 지으세요. 돈타워는 몹을 치지 않고 <b>노동자를 때려 공격력의 일부를 돈으로 축적</b>합니다.
     로또 회사·은행·부동산으로 수입원을 늘릴 수도 있습니다.<br>
     ② <b>타워 놀이방 → … → 대학교</b>는 싼 기본 타워('돈 벌기' 전환 가능). <b>옵션타워</b>는 11가지 계열(슬로우·공속업·스턴·멀티샷·장거리·독·체인·대포·저주·CCTV·처형) 중 하나로 바뀝니다.<br>
@@ -1441,6 +1471,19 @@ function renderCard() {
         el.addEventListener('click', () => runCmd(c));
         el.addEventListener('mouseenter', () => showTip(c));
         el.addEventListener('mouseleave', hideTip);
+        // 터치: 길게 누르면 지금의 mouseenter 설명과 같은 툴팁을 띄운다 (PC 마우스 흐름은 그대로)
+        el.addEventListener('touchstart', () => {
+          cmdTouch.id = c.id; cmdTouch.fired = false;
+          cmdTouch.timer = setTimeout(() => { cmdTouch.fired = true; showTip(c); }, 420);
+        }, { passive: true });
+        el.addEventListener('touchend', ev => {
+          if (cmdTouch.timer) { clearTimeout(cmdTouch.timer); cmdTouch.timer = null; }
+          if (cmdTouch.fired && cmdTouch.id === c.id) { ev.preventDefault(); hideTip(); cmdTouch.fired = false; }
+        });
+        el.addEventListener('touchcancel', () => {
+          if (cmdTouch.timer) { clearTimeout(cmdTouch.timer); cmdTouch.timer = null; }
+          cmdTouch.fired = false;
+        }, { passive: true });
         c.el = el; c.lvEl = el.querySelector('.lvl'); c.cdEl = el.querySelector('.cdv');
       }
       box.appendChild(el);
@@ -1467,6 +1510,7 @@ function runCmd(c) {
   c.run();
 }
 let tipCmd = null;
+const cmdTouch = { timer: null, fired: false, id: null };   // 명령 카드 길게 누르기 상태 (터치 전용)
 function showTip(c) {
   tipCmd = c;
   const miss = c.req ? c.req() : [];
@@ -1875,7 +1919,8 @@ function pick(x, y) {
 function select(e) { if (G.sel !== e) G.page = null; G.sel = e; }
 cv.addEventListener('mousemove', ev => { if (!G) return; const p = toWorld(ev); G.hover = { c: Math.floor(p.x / T), r: Math.floor(p.y / T) }; });
 cv.addEventListener('mouseleave', () => { if (G) G.hover = null; });
-cv.addEventListener('click', ev => {
+// 좌클릭(선택·건설 확정·이동 지점 지정)과 우클릭(이동 명령·취소) — 이름 붙여서 아래 터치 핸들러도 그대로 재사용한다.
+function doMapClick(ev) {
   if (!G || G.over || G.paused) return;
   const p = toWorld(ev);
   if (G.moveMode) {
@@ -1889,16 +1934,54 @@ cv.addEventListener('click', ev => {
     return;
   }
   select(pick(p.x, p.y));
-});
-cv.addEventListener('contextmenu', ev => {
-  ev.preventDefault(); if (!G) return;
+}
+function doMapContext(ev) {
+  if (ev.preventDefault) ev.preventDefault();
+  if (!G) return;
   if (G.placing || G.moveMode) { G.placing = null; G.moveMode = null; return; }
   const p = toWorld(ev);
   if (G.sel && G.sel.isUnit) {
     G.sel.tx = Math.max(10, Math.min(W - 10, p.x)); G.sel.ty = Math.max(10, Math.min(H - 10, p.y));
     G.fx.push({ ring: true, x: p.x, y: p.y, r: 10, life: .4, max: .4, color: '#46e05a' });
   }
-});
+}
+cv.addEventListener('click', doMapClick);
+cv.addEventListener('contextmenu', doMapContext);
+
+/* ---------- 터치(휴대폰) 조작 ----------
+   PC(마우스)는 터치 이벤트가 발생하지 않으므로 위 click·contextmenu 흐름은 그대로다.
+   터치에서는: 탭 = 좌클릭(doMapClick), 길게 누르기(420ms) = 우클릭(doMapContext, 노동자 이동 명령). */
+let isTouch = false;
+try { isTouch = matchMedia('(pointer: coarse)').matches; } catch (e) {}
+if (isTouch) document.body.classList.add('touch');
+addEventListener('touchstart', function onFirstTouch() {
+  if (!isTouch) { isTouch = true; document.body.classList.add('touch'); }
+}, { once: true, passive: true });
+
+function fakeMouseEvt(x, y) { return { clientX: x, clientY: y, shiftKey: false, preventDefault() {} }; }
+const mapTouch = { timer: null, longFired: false, x: 0, y: 0 };
+function clearMapTouchTimer() { if (mapTouch.timer) { clearTimeout(mapTouch.timer); mapTouch.timer = null; } }
+function updateMapHover(x, y) { if (!G) return; const p = toWorld(fakeMouseEvt(x, y)); G.hover = { c: Math.floor(p.x / T), r: Math.floor(p.y / T) }; }
+cv.addEventListener('touchstart', ev => {
+  if (!G || ev.touches.length !== 1) return;
+  const t = ev.touches[0];
+  mapTouch.x = t.clientX; mapTouch.y = t.clientY; mapTouch.longFired = false;
+  ev.preventDefault();
+  updateMapHover(mapTouch.x, mapTouch.y);
+  mapTouch.timer = setTimeout(() => { mapTouch.longFired = true; doMapContext(fakeMouseEvt(mapTouch.x, mapTouch.y)); }, 420);
+}, { passive: false });
+cv.addEventListener('touchmove', ev => {
+  if (!G || ev.touches.length !== 1) return;
+  const t = ev.touches[0];
+  mapTouch.x = t.clientX; mapTouch.y = t.clientY;
+  ev.preventDefault();
+  updateMapHover(mapTouch.x, mapTouch.y);
+}, { passive: false });
+cv.addEventListener('touchend', () => {
+  clearMapTouchTimer();
+  if (!mapTouch.longFired) doMapClick(fakeMouseEvt(mapTouch.x, mapTouch.y));
+}, { passive: true });
+cv.addEventListener('touchcancel', () => { clearMapTouchTimer(); }, { passive: true });
 window.addEventListener('keydown', ev => {
   if (!G || !$('game').classList.contains('on')) return;
   const k = ev.key.toLowerCase();
@@ -1912,6 +1995,11 @@ window.addEventListener('keydown', ev => {
   if (c) runCmd(c);
 });
 $('goBtn').onclick = () => { newGame(); show('game'); };
+// 규칙 보기/감추기 — 버튼은 터치 기기에서만 보이므로(CSS .tglRules) PC 에는 영향이 없다.
+$('rulesBtn').onclick = () => {
+  const open = $('howto').classList.toggle('open');
+  $('rulesBtn').textContent = open ? '📜 규칙 감추기 ▲' : '📜 규칙 보기 ▾';
+};
 $('shopBtn').onclick = () => toggleShop();
 $('shopCloseBtn').onclick = () => toggleShop(false);
 $('menuBtn').onclick = () => togglePause();
