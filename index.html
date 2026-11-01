@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Game Hub</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#080b13">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Game Hub">
+<link rel="icon" type="image/png" href="icons/favicon-48.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
   /* ── 디자인 토큰 ───────────────────────────────
      색·둥글기·그림자는 여기서만 정한다. 게임 쪽(넥서스 디펜스)과 같은 결을 쓴다. */
@@ -379,5 +386,6 @@ $('badges').innerHTML =
     `<span class="badge${b.cond ? ' on' : ''}" title="${escAttr(b.title)}">${b.icon} ${b.name}</span>`
   ).join('')}</div>`;
 </script>
+<script src="pwa.js" data-watch="index.html"></script>
 </body>
 </html>

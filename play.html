@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Game Hub</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#080b13">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Game Hub">
+<link rel="icon" type="image/png" href="icons/favicon-48.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
   /* 게임은 손대지 않고 iframe 으로 띄운다. 그래서 게임 화면 위에 허브 버튼이
      겹치지 않도록, 위에 얇은 띠를 두고 그 아래를 통째로 게임에 준다. */
@@ -90,5 +97,6 @@ if (!g) {
   };
 }
 </script>
+<script src="pwa.js" data-watch="play.html"></script>
 </body>
 </html>
