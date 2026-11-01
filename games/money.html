@@ -245,6 +245,31 @@ button{font-family:inherit;cursor:pointer}
   #iExtra{font-size:10px}
   #cv{touch-action:none}
 }
+
+/* ---------- 터치 확대 보기 (body.touchview — JS 가 터치 기기에서만 붙인다) ----------
+   맵을 화면에 통째로 우겨 넣으면 한 칸이 10px 대라 누르기 어렵다.
+   터치에서는 맵을 크게 띄우고(#cv 를 절대 위치로) 한 손가락으로 끌어 옮긴다. */
+body.touchview #stage{display:block;overflow:hidden}
+body.touchview #cv{position:absolute;left:0;top:0}
+#zoomBtns{display:none}
+body.touchview #zoomBtns{display:flex;flex-direction:column;gap:8px;position:absolute;left:8px;bottom:10px;z-index:6}
+#zoomBtns button{width:44px;height:44px;border-radius:10px;border:1px solid #8a6d2b;
+  background:rgba(22,24,27,.86);color:#ffd75e;font-size:22px;font-weight:800;line-height:1;touch-action:manipulation}
+#zoomBtns button:active{background:#3a3d42}
+#placeHint{display:none;position:absolute;left:50%;top:8px;transform:translateX(-50%);z-index:6;
+  background:rgba(22,24,27,.9);border:1px solid #8a6d2b;border-radius:8px;padding:6px 12px;
+  color:#ffe28a;font-size:13px;font-weight:700;white-space:nowrap;pointer-events:none}
+body.touchview #placeHint.on{display:block}
+
+/* 세로로 든 휴대폰: 명령 카드를 콘솔 한 줄 전체로 키운다 (버튼 한 칸 약 90×48px) */
+@media (pointer:coarse) and (orientation:portrait){
+  #console{height:auto;flex-wrap:wrap}
+  #mmWrap{width:96px;height:84px}
+  #portrait{height:84px}
+  #info{height:84px;flex:1}
+  #card{flex:none;width:100%;height:162px;order:5;gap:5px;padding:5px}
+  .cmd{font-size:24px}
+}
 </style>
 </head>
 <body>
@@ -304,6 +329,8 @@ button{font-family:inherit;cursor:pointer}
   </div>
   <div id="stage">
     <canvas id="cv"></canvas>
+    <div id="zoomBtns"><button type="button" data-z="in" aria-label="확대">+</button><button type="button" data-z="out" aria-label="축소">−</button><button type="button" data-z="fit" aria-label="전체 보기">⤢</button></div>
+    <div id="placeHint">한 번 눌러 위치 확인 → 같은 곳을 한 번 더 누르면 건설</div>
     <div id="buffs"></div>
     <div id="kills">
       <h4>Kills</h4>
@@ -1955,33 +1982,95 @@ let isTouch = false;
 try { isTouch = matchMedia('(pointer: coarse)').matches; } catch (e) {}
 if (isTouch) document.body.classList.add('touch');
 addEventListener('touchstart', function onFirstTouch() {
-  if (!isTouch) { isTouch = true; document.body.classList.add('touch'); }
+  if (!isTouch) { isTouch = true; document.body.classList.add('touch'); if (G) fit(); }
 }, { once: true, passive: true });
 
 function fakeMouseEvt(x, y) { return { clientX: x, clientY: y, shiftKey: false, preventDefault() {} }; }
-const mapTouch = { timer: null, longFired: false, x: 0, y: 0 };
-function clearMapTouchTimer() { if (mapTouch.timer) { clearTimeout(mapTouch.timer); mapTouch.timer = null; } }
+/* 터치 화면 보기 — 터치 기기에서만 쓴다. PC 는 fit() 의 '맵 전체 맞춤' 그대로.
+   view.z: 맵 배율, view.ox/oy: #stage 안에서 맵 왼쪽 위 위치(px). */
+const view = { z: 0, ox: 0, oy: 0, fitZ: 1 };
+const TOUCH_TILE = 34;   // 처음 들어갈 때 한 칸 크기(px) — 손가락으로 누르기 좋은 크기
+function stageBox() { const st = $('stage'); return { aw: st.clientWidth, ah: st.clientHeight }; }
+function clampView() {
+  const { aw, ah } = stageBox(), mw = W * view.z, mh = H * view.z;
+  view.ox = mw <= aw ? (aw - mw) / 2 : Math.min(0, Math.max(aw - mw, view.ox));
+  view.oy = mh <= ah ? (ah - mh) / 2 : Math.min(0, Math.max(ah - mh, view.oy));
+}
+function applyView() {
+  clampView();
+  cv.style.width = `${W * view.z}px`; cv.style.height = `${H * view.z}px`;
+  cv.style.left = `${view.ox}px`; cv.style.top = `${view.oy}px`;
+}
+function zoomAt(nz, cx, cy) {            // cx, cy: #stage 안 좌표를 기준점으로 확대·축소
+  nz = Math.max(view.fitZ, Math.min(2.2, nz));
+  const wx = (cx - view.ox) / view.z, wy = (cy - view.oy) / view.z;
+  view.z = nz; view.ox = cx - wx * nz; view.oy = cy - wy * nz;
+  applyView();
+}
+function centerOn(wx, wy) { const { aw, ah } = stageBox(); view.ox = aw / 2 - wx * view.z; view.oy = ah / 2 - wy * view.z; applyView(); }
+document.querySelectorAll('#zoomBtns button').forEach(b => b.addEventListener('click', () => {
+  const { aw, ah } = stageBox();
+  if (b.dataset.z === 'in') zoomAt(view.z * 1.3, aw / 2, ah / 2);
+  else if (b.dataset.z === 'out') zoomAt(view.z / 1.3, aw / 2, ah / 2);
+  else zoomAt(view.fitZ, aw / 2, ah / 2);
+}));
+
+// 한 손가락: 탭 = 좌클릭, 길게 누르기(450ms) = 우클릭(노동자 이동), 끌기 = 맵 이동. 두 손가락: 확대·축소.
+const tch = { mode: null, timer: null, x: 0, y: 0, sx: 0, sy: 0, ox: 0, oy: 0, d0: 1, z0: 1, pend: null };
+function clearMapTouchTimer() { if (tch.timer) { clearTimeout(tch.timer); tch.timer = null; } }
+function stagePt(x, y) { const r = $('stage').getBoundingClientRect(); return { x: x - r.left, y: y - r.top }; }
 function updateMapHover(x, y) { if (!G) return; const p = toWorld(fakeMouseEvt(x, y)); G.hover = { c: Math.floor(p.x / T), r: Math.floor(p.y / T) }; }
+// 터치 탭. 건설 중이면 1번째 탭은 위치 미리보기(초록/빨강 칸), 같은 칸을 한 번 더 누르면 건설한다 (잘못 눌러 짓는 것 방지).
+function doMapTap(x, y) {
+  if (G && G.placing && !G.over && !G.paused && !G.moveMode) {
+    const p = toWorld(fakeMouseEvt(x, y)), c = Math.floor(p.x / T), r = Math.floor(p.y / T);
+    const pd = tch.pend;
+    if (!pd || pd.c !== c || pd.r !== r || pd.kind !== G.placing) {
+      tch.pend = { c, r, kind: G.placing }; G.hover = { c, r };
+      return;
+    }
+    tch.pend = null;
+  }
+  doMapClick(fakeMouseEvt(x, y));
+}
 cv.addEventListener('touchstart', ev => {
-  if (!G || ev.touches.length !== 1) return;
-  const t = ev.touches[0];
-  mapTouch.x = t.clientX; mapTouch.y = t.clientY; mapTouch.longFired = false;
+  if (!G) return;
   ev.preventDefault();
-  updateMapHover(mapTouch.x, mapTouch.y);
-  mapTouch.timer = setTimeout(() => { mapTouch.longFired = true; doMapContext(fakeMouseEvt(mapTouch.x, mapTouch.y)); }, 420);
+  if (ev.touches.length >= 2) {
+    clearMapTouchTimer();
+    const a = ev.touches[0], b = ev.touches[1];
+    tch.mode = 'pinch'; tch.d0 = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1; tch.z0 = view.z;
+    return;
+  }
+  const t = ev.touches[0];
+  tch.mode = 'tap'; tch.x = tch.sx = t.clientX; tch.y = tch.sy = t.clientY; tch.ox = view.ox; tch.oy = view.oy;
+  tch.timer = setTimeout(() => {
+    tch.timer = null;
+    if (tch.mode === 'tap') { tch.mode = 'long'; doMapContext(fakeMouseEvt(tch.x, tch.y)); }
+  }, 450);
 }, { passive: false });
 cv.addEventListener('touchmove', ev => {
-  if (!G || ev.touches.length !== 1) return;
-  const t = ev.touches[0];
-  mapTouch.x = t.clientX; mapTouch.y = t.clientY;
+  if (!G) return;
   ev.preventDefault();
-  updateMapHover(mapTouch.x, mapTouch.y);
+  if (tch.mode === 'pinch' && ev.touches.length >= 2) {
+    const a = ev.touches[0], b = ev.touches[1];
+    const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    const m = stagePt((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
+    zoomAt(tch.z0 * d / tch.d0, m.x, m.y);
+    return;
+  }
+  if (ev.touches.length !== 1) return;
+  const t = ev.touches[0]; tch.x = t.clientX; tch.y = t.clientY;
+  if (tch.mode === 'tap' && Math.hypot(tch.x - tch.sx, tch.y - tch.sy) > 10) { clearMapTouchTimer(); tch.mode = 'pan'; }
+  if (tch.mode === 'pan' && view.z) { view.ox = tch.ox + (tch.x - tch.sx); view.oy = tch.oy + (tch.y - tch.sy); applyView(); }
 }, { passive: false });
-cv.addEventListener('touchend', () => {
+cv.addEventListener('touchend', ev => {
+  if (ev.touches.length > 0) { if (tch.mode === 'pinch') tch.mode = 'none'; return; }   // 두 손가락 중 하나만 뗌
   clearMapTouchTimer();
-  if (!mapTouch.longFired) doMapClick(fakeMouseEvt(mapTouch.x, mapTouch.y));
+  if (tch.mode === 'tap') doMapTap(tch.x, tch.y);
+  tch.mode = null;
 }, { passive: true });
-cv.addEventListener('touchcancel', () => { clearMapTouchTimer(); }, { passive: true });
+cv.addEventListener('touchcancel', () => { clearMapTouchTimer(); tch.mode = null; }, { passive: true });
 window.addEventListener('keydown', ev => {
   if (!G || !$('game').classList.contains('on')) return;
   const k = ev.key.toLowerCase();
@@ -1994,7 +2083,7 @@ window.addEventListener('keydown', ev => {
   const c = cardCmds.find(x => x.hot.toLowerCase() === k);
   if (c) runCmd(c);
 });
-$('goBtn').onclick = () => { newGame(); show('game'); };
+$('goBtn').onclick = () => { newGame(); view.z = 0; tch.pend = null; show('game'); };
 // 규칙 보기/감추기 — 버튼은 터치 기기에서만 보이므로(CSS .tglRules) PC 에는 영향이 없다.
 $('rulesBtn').onclick = () => {
   const open = $('howto').classList.toggle('open');
@@ -2009,7 +2098,7 @@ $('speedBtn').onclick = () => { G.speed = G.speed >= 3 ? 1 : G.speed + 1; };
 $('nextBtn').onclick = () => { if (!G.inRound) startRound(); };
 $('resumeBtn').onclick = () => togglePause(false);
 $('quitBtn').onclick = () => { $('pauseOv').classList.remove('on'); G.paused = false; finish(); };
-$('againBtn').onclick = () => newGame();
+$('againBtn').onclick = () => { newGame(); view.z = 0; tch.pend = null; fit(); };
 $('toMenuBtn').onclick = () => { G = null; refreshMenu(); show('menu'); };
 function togglePause(v) { if (!G || G.over) return; G.paused = v === undefined ? !G.paused : v; $('pauseOv').classList.toggle('on', G.paused); }
 function show(id) { for (const s of document.querySelectorAll('.screen')) s.classList.toggle('on', s.id === id); if (id === 'game') fit(); }
@@ -2028,7 +2117,15 @@ function refreshMenu() {
 function fit() {
   const st = $('stage'), aw = st.clientWidth, ah = st.clientHeight;
   const s = Math.max(0.2, Math.min(aw / W, ah / H));
-  cv.style.width = `${W * s}px`; cv.style.height = `${H * s}px`;
+  if (!isTouch) { cv.style.width = `${W * s}px`; cv.style.height = `${H * s}px`; return; }
+  // 터치: 처음엔 한 칸이 TOUCH_TILE px 가 되게 키우고 노동자(없으면 맵 가운데)를 화면 가운데로
+  document.body.classList.add('touchview');
+  view.fitZ = s;
+  if (!view.z) {
+    view.z = Math.max(s, TOUCH_TILE / T);
+    const u = G && G.units && G.units[0];
+    centerOn(u ? u.x : W / 2, u ? u.y : H / 2);
+  } else { view.z = Math.max(view.z, s); applyView(); }
 }
 window.addEventListener('resize', fit);
 
@@ -2039,6 +2136,7 @@ function loop(now) {
   if (G && $('game').classList.contains('on')) {
     if (!G.paused && !G.over) { let dt = real * G.speed; while (dt > 0) { const s = Math.min(dt, 1 / 60); update(s); dt -= s; if (G.over) break; } }
     draw(); drawMinimap(); refreshUI();
+    if (isTouch) { const ph = $('placeHint'), on = !!(G && G.placing); if (ph.classList.contains('on') !== on) ph.classList.toggle('on', on); if (!on) tch.pend = null; }
   }
   requestAnimationFrame(loop);
 }
