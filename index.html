@@ -57,6 +57,36 @@
     filter: drop-shadow(0 6px 26px rgba(75,134,255,.35));
   }
   header .sub { color: var(--text-mute); font-size: 12.5px; letter-spacing: .34em; margin-top: 8px; }
+  /* 앱 설치 버튼 — 홈 화면 앱(PWA)으로 이미 열었으면 pwa.js 가 숨긴다 */
+  .install {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 18px;
+    height: 44px; padding: 0 20px; border-radius: 999px; cursor: pointer;
+    border: 1px solid rgba(127,178,255,.45);
+    background: linear-gradient(180deg, var(--brand), var(--brand-deep));
+    color: #fff; font-family: inherit; font-size: 14.5px; font-weight: 800; letter-spacing: .02em;
+    box-shadow: 0 6px 20px rgba(47,98,223,.4), var(--hair);
+  }
+  .install:hover { filter: brightness(1.08); }
+  .install:focus-visible { outline: none; box-shadow: var(--ring); }
+  .install[hidden] { display: none; }
+  #installHelp {
+    position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center;
+    padding: 16px; background: rgba(4,7,14,.72);
+  }
+  #installHelp.open { display: flex; }
+  #installHelp .box {
+    width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--line-strong);
+    border-radius: var(--r-lg); padding: 20px 20px 16px; box-shadow: var(--sh-2);
+  }
+  #installHelp h2 { font-size: 17px; margin-bottom: 12px; }
+  #installHelp ol { padding-left: 20px; color: var(--text-dim); font-size: 14px; line-height: 1.75; }
+  #installHelp ol b { color: var(--text); }
+  #installHelp .note { margin-top: 10px; font-size: 12.5px; color: var(--text-mute); line-height: 1.6; }
+  #installHelp .close {
+    margin-top: 14px; width: 100%; height: 42px; border-radius: var(--r-md); cursor: pointer;
+    border: 1px solid var(--line-strong); background: rgba(255,255,255,.06); color: var(--text);
+    font-family: inherit; font-size: 14px; font-weight: 700;
+  }
 
   /* 게임 카드 — 넓은 화면에서 2열 */
   /* min() 을 끼워 좁은 화면에서 카드가 화면 밖으로 밀려나지 않게 한다 */
@@ -159,7 +189,16 @@
   <header>
     <h1>GAME HUB</h1>
     <p class="sub">PICK YOUR GAME</p>
+    <button class="install" id="installBtn" type="button" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>앱 설치</button>
   </header>
+  <div id="installHelp" role="dialog" aria-modal="true" aria-labelledby="installHelpTitle">
+    <div class="box">
+      <h2 id="installHelpTitle">홈 화면에 앱 설치하기</h2>
+      <ol id="installSteps"></ol>
+      <p class="note">설치하면 홈 화면의 Game Hub 아이콘으로 주소창 없이 전체 화면으로 열리고, 게임을 고치면 자동으로 최신판이 됩니다.</p>
+      <button class="close" id="installHelpClose" type="button">닫기</button>
+    </div>
+  </div>
 
   <div id="banner"></div>
 
