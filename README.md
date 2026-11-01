@@ -1,6 +1,6 @@
 # 🎮 Game Hub
 
-직접 만든 브라우저 게임 세 개를 한곳에서 고르고 바로 플레이하는 허브입니다. `index.html`을 열면 카드 세 장이 뜨고, 누르면 허브 안에서 그 게임이 실행됩니다.
+직접 만든 브라우저 게임 네 개를 한곳에서 고르고 바로 플레이하는 허브입니다. `index.html`을 열면 카드 네 장이 뜨고, 누르면 허브 안에서 그 게임이 실행됩니다.
 
 **바로 플레이**: https://chs034792-prog.github.io/Game-Hub/ (휴대폰에서는 아래 '휴대폰 앱으로 설치'처럼 홈 화면에 추가하면 앱처럼 쓸 수 있습니다)
 
@@ -11,6 +11,7 @@
 | 슬라임 키우기 | 방치형 | [SlimeGame](https://github.com/chs034792-prog/SlimeGame) |
 | 넥서스 디펜스 | 타워 디펜스 | [Nexus-Defense](https://github.com/chs034792-prog/Nexus-Defense) |
 | 머니 디펜스 | 경로형 TD | [Money-Defense](https://github.com/chs034792-prog/Money-Defense) |
+| 용병단 키우기 | 방치형 RPG | 로컬 (아직 GitHub 미연결) |
 
 > **극한 벽짓고 살아남기는 2026-11-02 허브에서 내렸습니다** (CEO 결정 — 휴대폰 조작이 맞지 않음). 원본 저장소 [Wall-Defense](https://github.com/chs034792-prog/Wall-Defense)와 플레이어 저장 기록(`wallDefenseMeta`·`wallDefenseRecords2`)은 그대로 둡니다. 되살리려면 `tools/sync.js`·`index.html`·`play.html`의 `GAMES`, `sw.js`의 `CORE`, `manifest.webmanifest` 바로가기에 다시 넣고 `games/wall.html`을 git 기록에서 되살립니다.
 
@@ -30,7 +31,8 @@ steamGame/        게임 관련 잡다한 스크립트 (좀보이드 전용서�
 SlimeGame/        ┐ 게임 원본 저장소를 받아 둔 작업용 폴더.
 Nexus-Defense/    │ 각자 자기 저장소를 가리키므로 여기서 고쳐 바로 커밋·푸쉬하면 된다.
 Money-Defense/    │ 허브 저장소에는 담기지 않는다 (.gitignore).
-Wall-Defense/     ┘ 없으면 아래 '게임 원본 받기'로 다시 받는다.
+Wall-Defense/     │ 없으면 아래 '게임 원본 받기'로 다시 받는다.
+Mercenary-Idle/   ┘ 용병단 키우기 원본 — 아직 로컬 git 뿐이고 GitHub 에는 연결 전이다.
 ```
 
 - **게임 코드는 손대지 않습니다.** `games/*.html`은 원본 저장소의 `index.html`을 그대로 복사한 것이고, 허브 기능(돌아가기 버튼 등)은 전부 `play.html` 쪽에 있습니다. 그래서 원본을 고쳐도 충돌 없이 다시 복사만 하면 됩니다.
@@ -73,6 +75,7 @@ git clone https://github.com/chs034792-prog/Wall-Defense.git Wall-Defense
 | 넥서스 디펜스 | `nexusdefense.save` | 최고 웨이브 · 코어 · 출격 |
 | 머니 디펜스 | `moneydefense.v4` | 최고 라운드 · 처치 · 플레이 |
 | 극한 벽짓고 살아남기 | `wallDefenseMeta`, `wallDefenseRecords2` | 최고 웨이브 · 승리 · 정수 |
+| 용병단 키우기 | `gamehub.idlerpg.v1` | 스테이지 · 골드 · 승리 |
 
 같은 사이트(origin)에서 열면 저장 공간을 공유하므로, **게임을 따로 열어 쌓은 기록도 허브에서 그대로 이어집니다.** 예를 들어 `chs034792-prog.github.io`의 게임들과 이 허브는 같은 사이트라 기록이 그대로입니다. 반대로 주소(도메인)가 다르면 브라우저가 저장 공간을 따로 주기 때문에 기록이 보이지 않습니다 — 그럴 땐 게임의 백업 코드 기능으로 옮기세요.
 

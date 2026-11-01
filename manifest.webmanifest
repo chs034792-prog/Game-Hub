@@ -18,6 +18,7 @@
   "shortcuts": [
     { "name": "슬라임 키우기", "url": "./play.html?game=slime", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "넥서스 디펜스", "url": "./play.html?game=nexus", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "머니 디펜스", "url": "./play.html?game=money", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+    { "name": "머니 디펜스", "url": "./play.html?game=money", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "용병단 키우기", "url": "./play.html?game=merc", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

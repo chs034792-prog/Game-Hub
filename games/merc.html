@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#121826">
+<title>용병단 키우기</title>
+<style>
+  :root{
+    --bg:#0b0f17;
+    --app-bg:linear-gradient(180deg,#121826 0%,#0d1320 60%,#0a0e16 100%);
+    --panel-bg:#141c2b;
+    --card-bg:#1c2636;
+    --card-bg2:#202c40;
+    --line:#2a3650;
+    --text:#e8edf5;
+    --sub:#9aa7bd;
+    --gold:#ffcf4d;
+    --common:#9aa5b1;
+    --rare:#5fb4ff;
+    --epic:#ff9d3d;
+    --danger:#ff5d5d;
+    --success:#58d68d;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;margin:0;background:var(--bg);overflow:hidden;}
+  body{
+    font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    touch-action:manipulation;
+    user-select:none;
+  }
+  #app{
+    width:100%;
+    max-width:480px;
+    height:100vh;
+    height:100dvh;
+    margin:0 auto;
+    background:var(--app-bg);
+    color:var(--text);
+    display:flex;
+    flex-direction:column;
+    position:relative;
+    overflow:hidden;
+  }
+  button{font-family:inherit;border:none;background:none;color:inherit;cursor:pointer;}
+  button:disabled{opacity:.4;cursor:default;}
+
+  /* ===== 상단바 ===== */
+  #topbar{
+    flex:0 0 auto;
+    display:flex;align-items:center;gap:10px;
+    padding:10px 12px;
+    background:rgba(20,28,43,.9);
+    border-bottom:1px solid var(--line);
+    font-weight:bold;font-size:14px;
+  }
+  #topbar .stat{display:flex;align-items:center;gap:4px;white-space:nowrap;}
+  #topbar .stat .ic{font-size:16px;}
+  #topbar .spacer{flex:1;}
+  #soundBtn{font-size:20px;min-width:40px;min-height:40px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--card-bg);}
+
+  /* ===== 전투 화면 ===== */
+  #battleScreen{flex:1 1 auto;display:flex;flex-direction:column;padding:10px 12px;gap:8px;overflow:hidden;min-height:0;}
+
+  #stageRow{display:flex;align-items:center;gap:6px;}
+  #stageRow .navBtn{min-width:44px;min-height:40px;background:var(--card-bg);border-radius:10px;font-size:18px;font-weight:bold;}
+  #stageLabel{flex:1;text-align:center;font-size:14px;font-weight:bold;background:var(--card-bg);border-radius:10px;padding:8px 6px;line-height:1.3;}
+  #stageLabel .zone{color:var(--gold);}
+  #bossBtn{min-height:40px;padding:0 10px;border-radius:10px;background:#3a2140;color:#ffb6e6;font-size:13px;font-weight:bold;white-space:nowrap;}
+  #bossBtn.hidden{display:none;}
+
+  #arena{
+    flex:1 1 auto;min-height:0;
+    background:var(--card-bg);
+    border-radius:14px;
+    border:1px solid var(--line);
+    padding:10px;
+    display:flex;flex-direction:column;gap:8px;
+    overflow:hidden;
+  }
+  #combatRow{display:flex;align-items:center;justify-content:space-between;gap:6px;}
+  #partyCol{display:flex;flex-direction:column;gap:6px;flex:1;}
+  .unitChip{display:flex;align-items:center;gap:6px;background:var(--card-bg2);border-radius:10px;padding:4px 6px;}
+  .unitChip .uic{font-size:20px;width:26px;text-align:center;}
+  .unitChip .ubars{flex:1;min-width:0;}
+  .unitChip .uname{font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .hpbarWrap{height:8px;background:#0e1420;border-radius:5px;overflow:hidden;margin-top:2px;}
+  .hpbarFill{height:100%;background:linear-gradient(90deg,#58d68d,#3fae6c);border-radius:5px;transition:width .25s;}
+  .hpbarFill.dead{background:#444;}
+  .unitChip.deadChip{opacity:.4;}
+
+  #vsCol{font-size:18px;color:var(--sub);padding:0 4px;}
+
+  #enemyBox{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+  #enemyIcon{font-size:40px;}
+  #enemyName{font-size:13px;font-weight:bold;text-align:center;}
+  #enemyHpWrap{width:100%;height:10px;background:#0e1420;border-radius:6px;overflow:hidden;}
+  #enemyHpFill{height:100%;width:100%;background:linear-gradient(90deg,#ff6b6b,#d23f3f);transition:width .2s;}
+  #enemyHpText{font-size:11px;color:var(--sub);}
+
+  #logBox{
+    flex:0 0 auto;max-height:92px;overflow-y:auto;
+    background:#0e1420;border-radius:10px;padding:6px 8px;
+    font-size:12px;line-height:1.5;color:var(--sub);
+  }
+  #logBox div{white-space:pre-wrap;word-break:break-all;}
+
+  /* ===== 필살기 버튼 ===== */
+  #ultiWrap{flex:0 0 auto;display:flex;justify-content:center;padding:10px 0;}
+  #ultiRing{
+    width:92px;height:92px;border-radius:50%;
+    background:conic-gradient(var(--gold) 0%, #2a3650 0%);
+    display:flex;align-items:center;justify-content:center;
+    padding:5px;
+  }
+  #ultiBtn{
+    width:100%;height:100%;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#3a4258,#1c2434);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-size:11px;font-weight:bold;color:var(--sub);
+    border:2px solid #333e55;
+  }
+  #ultiBtn .big{font-size:24px;}
+  #ultiRing.ready{animation:pulse 1s infinite;}
+  #ultiRing.ready #ultiBtn{color:var(--gold);border-color:var(--gold);box-shadow:0 0 14px rgba(255,207,77,.7) inset;}
+  @keyframes pulse{0%,100%{filter:drop-shadow(0 0 2px rgba(255,207,77,.4));}50%{filter:drop-shadow(0 0 14px rgba(255,207,77,.9));}}
+
+  /* ===== 하단 탭바 ===== */
+  #tabbar{flex:0 0 auto;display:flex;border-top:1px solid var(--line);background:rgba(20,28,43,.95);}
+  #tabbar button{flex:1;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--sub);}
+  #tabbar button .ic{font-size:20px;}
+  #tabbar button.active{color:var(--gold);}
+
+  /* ===== 패널(모달) ===== */
+  #panelOverlay{
+    position:absolute;inset:0;display:none;
+    background:rgba(5,8,14,.72);
+    z-index:40;
+  }
+  #panelOverlay.show{display:flex;align-items:flex-end;}
+  #panelCard{
+    width:100%;max-height:82%;
+    background:var(--panel-bg);
+    border-radius:18px 18px 0 0;
+    border-top:1px solid var(--line);
+    display:flex;flex-direction:column;
+    overflow:hidden;
+  }
+  #panelHeader{display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);flex:0 0 auto;}
+  #panelTitle{font-size:16px;font-weight:bold;flex:1;}
+  #panelClose{font-size:18px;min-width:40px;min-height:40px;}
+  #panelBody{flex:1;overflow-y:auto;padding:12px 14px 20px;}
+
+  .sectionTitle{font-size:13px;color:var(--sub);margin:10px 0 6px;font-weight:bold;}
+  .btnPrimary{background:var(--gold);color:#241a00;font-weight:bold;border-radius:10px;min-height:44px;padding:0 14px;font-size:14px;}
+  .btnPrimary:disabled{background:#555;color:#999;}
+  .btnSecondary{background:var(--card-bg2);color:var(--text);border-radius:10px;min-height:44px;padding:0 14px;font-size:13px;border:1px solid var(--line);}
+  .btnSecondary:disabled{opacity:.4;}
+
+  .row{display:flex;align-items:center;gap:10px;}
+  .rowBetween{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+
+  /* 파티 슬롯 */
+  .slotRow{display:flex;gap:8px;margin-bottom:10px;}
+  .slotBox{flex:1;background:var(--card-bg);border-radius:12px;padding:8px;text-align:center;border:2px solid var(--line);}
+  .slotBox.selected{border-color:var(--gold);}
+  .slotBox .sic{font-size:28px;}
+  .slotBox .sname{font-size:12px;font-weight:bold;margin-top:2px;}
+  .slotBox .slv{font-size:11px;color:var(--sub);}
+
+  .mercRow{display:flex;align-items:center;gap:10px;background:var(--card-bg);border-radius:12px;padding:8px 10px;margin-bottom:8px;border:1px solid var(--line);}
+  .mercRow.locked{opacity:.45;}
+  .mercRow .mic{font-size:24px;width:30px;text-align:center;}
+  .mercRow .minfo{flex:1;min-width:0;}
+  .mercRow .mname{font-size:13px;font-weight:bold;}
+  .mercRow .mmeta{font-size:11px;color:var(--sub);}
+  .badge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px;font-weight:bold;}
+  .badge.common{background:#333c4a;color:var(--common);}
+  .badge.rare{background:#133552;color:var(--rare);}
+  .badge.epic{background:#4a2c0f;color:var(--epic);}
+
+  /* 도감 그리드 */
+  .codexGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .codexCard{background:var(--card-bg);border-radius:10px;padding:8px 4px;text-align:center;border:1px solid var(--line);}
+  .codexCard.locked{opacity:.35;}
+  .codexCard .cic{font-size:22px;}
+  .codexCard .cname{font-size:11px;font-weight:bold;margin-top:2px;}
+  .codexCard .clv{font-size:10px;color:var(--sub);}
+
+  .subtabs{display:flex;gap:6px;margin-bottom:10px;}
+  .subtabs button{flex:1;min-height:38px;border-radius:10px;background:var(--card-bg2);font-size:12px;font-weight:bold;color:var(--sub);}
+  .subtabs button.active{background:var(--gold);color:#241a00;}
+
+  .missionRow{background:var(--card-bg);border-radius:12px;padding:10px;margin-bottom:8px;}
+  .missionRow .mtitle{font-size:13px;font-weight:bold;margin-bottom:4px;}
+  .missionRow .mprog{font-size:11px;color:var(--sub);margin-bottom:6px;}
+  .progBarWrap{height:8px;background:#0e1420;border-radius:5px;overflow:hidden;margin-bottom:6px;}
+  .progBarFill{height:100%;background:var(--gold);}
+
+  .loginGrid{display:flex;gap:4px;margin:8px 0;}
+  .loginDay{flex:1;background:var(--card-bg);border-radius:8px;padding:6px 2px;text-align:center;font-size:10px;border:1px solid var(--line);}
+  .loginDay.done{border-color:var(--success);color:var(--success);}
+  .loginDay.today{border-color:var(--gold);color:var(--gold);}
+
+  /* ===== 공용 모달(튜토리얼/오프라인/소환결과) ===== */
+  .modalOverlay{position:absolute;inset:0;background:rgba(5,8,14,.8);display:none;align-items:center;justify-content:center;z-index:60;padding:20px;}
+  .modalOverlay.show{display:flex;}
+  .modalBox{background:var(--panel-bg);border-radius:16px;padding:18px;max-width:340px;width:100%;max-height:80%;overflow-y:auto;border:1px solid var(--line);}
+  .modalBox h3{margin:0 0 10px;font-size:16px;color:var(--gold);}
+  .modalBox p{font-size:13px;line-height:1.6;color:var(--text);margin:0 0 14px;}
+  .modalBox .mbtn{width:100%;}
+
+  .summonResultItem{display:flex;align-items:center;gap:10px;background:var(--card-bg);border-radius:10px;padding:8px 10px;margin-bottom:6px;}
+  .summonResultItem .sic{font-size:22px;}
+
+  #toast{
+    position:absolute;top:70px;left:50%;transform:translateX(-50%);
+    background:rgba(20,28,43,.95);color:var(--text);
+    padding:8px 16px;border-radius:20px;font-size:12px;
+    border:1px solid var(--line);
+    z-index:80;opacity:0;transition:opacity .25s;pointer-events:none;
+    white-space:nowrap;max-width:90%;overflow:hidden;text-overflow:ellipsis;
+  }
+  #toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 상단바 -->
+  <header id="topbar">
+    <div class="stat"><span class="ic">🗺️</span><span id="topStage">스테이지 1/20</span></div>
+    <div class="stat"><span class="ic">💰</span><span id="topGold">0</span></div>
+    <div class="stat"><span class="ic">🎫</span><span id="topTickets">0</span></div>
+    <div class="spacer"></div>
+    <button id="soundBtn">🔊</button>
+  </header>
+
+  <!-- 전투 화면 -->
+  <main id="battleScreen">
+    <div id="stageRow">
+      <button class="navBtn" id="stagePrev">◀</button>
+      <div id="stageLabel"></div>
+      <button class="navBtn" id="stageNext">▶</button>
+    </div>
+    <button id="bossBtn" class="hidden"></button>
+
+    <div id="arena">
+      <div id="combatRow">
+        <div id="partyCol"></div>
+        <div id="vsCol">⚔️</div>
+        <div id="enemyBox">
+          <div id="enemyIcon">❓</div>
+          <div id="enemyName">-</div>
+          <div id="enemyHpWrap"><div id="enemyHpFill"></div></div>
+          <div id="enemyHpText"></div>
+        </div>
+      </div>
+      <div id="logBox"></div>
+    </div>
+  </main>
+
+  <!-- 필살기 -->
+  <div id="ultiWrap">
+    <div id="ultiRing">
+      <button id="ultiBtn"><span class="big">💥</span><span>필살기</span></button>
+    </div>
+  </div>
+
+  <!-- 하단 탭바 -->
+  <nav id="tabbar">
+    <button data-tab="party"><span class="ic">🧑‍🤝‍🧑</span>파티</button>
+    <button data-tab="enhance"><span class="ic">🛠️</span>강화</button>
+    <button data-tab="summon"><span class="ic">🎟️</span>소환</button>
+    <button data-tab="mission"><span class="ic">📜</span>임무</button>
+    <button data-tab="codex"><span class="ic">📖</span>도감</button>
+  </nav>
+
+  <!-- 패널 오버레이 -->
+  <div id="panelOverlay">
+    <div id="panelCard">
+      <div id="panelHeader">
+        <div id="panelTitle">-</div>
+        <button id="panelClose">✕</button>
+      </div>
+      <div id="panelBody"></div>
+    </div>
+  </div>
+
+  <!-- 튜토리얼 -->
+  <div class="modalOverlay" id="tutorialOverlay">
+    <div class="modalBox">
+      <h3 id="tutTitle">환영합니다, 단장님</h3>
+      <p id="tutText"></p>
+      <button class="btnPrimary mbtn" id="tutNext">다음</button>
+    </div>
+  </div>
+
+  <!-- 오프라인 보상 -->
+  <div class="modalOverlay" id="offlineOverlay">
+    <div class="modalBox">
+      <h3>방치 보상</h3>
+      <p id="offlineText"></p>
+      <button class="btnPrimary mbtn" id="offlineOk">확인</button>
+    </div>
+  </div>
+
+  <!-- 소환 결과 -->
+  <div class="modalOverlay" id="summonOverlay">
+    <div class="modalBox">
+      <h3>소환 결과</h3>
+      <div id="summonResultList"></div>
+      <button class="btnPrimary mbtn" id="summonOk">확인</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* =========================================================
+   1) 데이터 — 역할·희귀도·용병 이름·구역·몬스터·보스
+   근거: 기획/2026-11-02_방치형RPG_기획안.md, 밸런스/2026-11-02_용병단키우기_1차수치설계.md
+   ========================================================= */
+
+var ROLE_ORDER = ["warrior","archer","mage","healer","rogue","tanker"];
+var RARITY_ORDER = ["common","rare","epic"];
+
+var ROLES = {
+  warrior:{ko:"전사", atk:12, def:10, hp:130, icon:"⚔️"},
+  archer :{ko:"궁수", atk:15, def:5,  hp:95,  icon:"🏹"},
+  mage   :{ko:"법사", atk:19, def:3,  hp:80,  icon:"🔮"},
+  healer :{ko:"힐러", atk:8,  def:7,  hp:115, icon:"✨"},
+  rogue  :{ko:"도적", atk:14, def:5,  hp:90,  icon:"🗡️"},
+  tanker :{ko:"탱커", atk:6,  def:16, hp:170, icon:"🛡️"}
+};
+
+var RARITIES = {
+  common:{ko:"일반", mult:1.0, rate:0.70, color:"var(--common)"},
+  rare  :{ko:"희귀", mult:1.5, rate:0.24, color:"var(--rare)"},
+  epic  :{ko:"영웅", mult:2.3, rate:0.06, color:"var(--epic)"}
+};
+
+// 오리지널 용병 이름 (역할 x 희귀도 = 18종, 상용 캐릭터명과 겹치지 않는 창작명)
+var MERC_NAMES = {
+  warrior:{common:"다물", rare:"가온", epic:"헤론"},
+  archer :{common:"시오", rare:"린다", epic:"아셴"},
+  mage   :{common:"유로", rare:"페르나", epic:"자카럼"},
+  healer :{common:"소이", rare:"티아나", epic:"레아실"},
+  rogue  :{common:"카심", rare:"네로한", epic:"이스카"},
+  tanker :{common:"보른", rare:"가록", epic:"두칸"}
+};
+
+var MERCS = {}; // id -> {id, role, rarity, name}
+ROLE_ORDER.forEach(function(r){
+  RARITY_ORDER.forEach(function(rk){
+    var id = r+"_"+rk;
+    MERCS[id] = {id:id, role:r, rarity:rk, name:MERC_NAMES[r][rk]};
+  });
+});
+
+// 구역 5개 + 구역별 대표 몬스터 + 보스 (오리지널 이름)
+var ZONES = [
+  {name:"잔해섬", monster:{name:"잔해들개", icon:"🐺"}, boss:{name:"폐허수호자 그라돈", icon:"👹", line:"그라돈: \"...이 섬의 잔재는 내가 지킨다.\""}},
+  {name:"안개섬", monster:{name:"안개환영", icon:"👻"}, boss:{name:"안개의 군주 모르한", icon:"🌫️", line:"모르한: \"길 잃은 자들에게 안식은 없다.\""}},
+  {name:"녹슨섬", monster:{name:"녹슨기갑병", icon:"⚙️"}, boss:{name:"강철거신 카라툼", icon:"🗿", line:"카라툼: \"쇠는 녹슬어도 무너지지 않는다.\""}},
+  {name:"폭풍섬", monster:{name:"폭풍매", icon:"🦅"}, boss:{name:"폭풍발톱 네크리스", icon:"⚡", line:"네크리스: \"하늘이 네 편이 될 것 같으냐.\""}},
+  {name:"재의섬", monster:{name:"재의정령", icon:"🔥"}, boss:{name:"전화의 잔영 이그다라스", icon:"👑", line:"이그다라스: \"전쟁은 끝나지 않았다. 네가 그것을 증명하겠지.\""}}
+];
+
+var LOGIN_REWARDS = [1,1,2,1,2,3,5]; // 7일 출석 (기획안/수치설계 그대로)
+var MATERIAL_BY_RARITY = {common:10, rare:30, epic:100}; // 중복 환전
+var MISSION_TARGETS = {m1:5, m2:2, m3:1};
+var STAMINA_MAX = 5;
+var STAMINA_REGEN_MS = 15*60*1000; // 15분당 1 [제안 — 문서에 수치 없어 구현팀이 결정]
+
+/* =========================================================
+   2) 수치 공식 — 밸런스 문서 표를 그대로 코드로
+   ========================================================= */
+function monsterHP(n){ return 150 * Math.pow(1.131, n-1); }
+function monsterATK(n){ return 8 * Math.pow(1.018, n-1); }
+function goldReward(n){ return Math.round(30 * Math.pow(1.20, n-1)); }
+function weaponCost(nextLv){ return Math.round(50 * Math.pow(1.13, nextLv-1)); }
+function weaponAtkBonus(lv){ return 4*lv; }
+function mercLevelCost(nextLv){ return 8*nextLv; }
+function zoneIndexOfStage(n){ return Math.floor((n-1)/4); }
+function zoneLastStageNum(zoneIdx){ return (zoneIdx+1)*4; }
+function getZone(zoneIdx){ return ZONES[zoneIdx]; }
+
+function computeStats(id, level){
+  var m = MERCS[id];
+  var base = ROLES[m.role];
+  var rarity = RARITIES[m.rarity];
+  var f = 1 + 0.07*(level-1);
+  return {
+    atk: base.atk*rarity.mult*f,
+    def: base.def*rarity.mult*f,
+    hp : base.hp*rarity.mult*f
+  };
+}
+
+/* =========================================================
+   3) 저장 / 상태
+   ========================================================= */
+var STORAGE_KEY = "gamehub.idlerpg.v1";
+
+function defaultSave(){
+  var mercs = {};
+  Object.keys(MERCS).forEach(function(id){ mercs[id] = {owned:false, level:1}; });
+  // 시작 용병 3인 (일반 등급 전사/궁수/힐러) — 문서에 없는 결정: 빈 파티로 시작하면 전투가 불가능하므로
+  // 가장 기본적인 조합(탱 대신 전사+딜러+힐러)을 기본 지급한다.
+  mercs["warrior_common"].owned = true;
+  mercs["archer_common"].owned = true;
+  mercs["healer_common"].owned = true;
+
+  return {
+    version:1,
+    gold:0, tickets:0, materials:0,
+    weaponLevel:0,
+    mercs:mercs,
+    party:["warrior_common","archer_common","healer_common"],
+    currentStage:1,
+    maxUnlockedStage:1,
+    stageFirstClear:{},
+    bossFirstClear:{},
+    monsterKillCount:{},
+    stamina:STAMINA_MAX,
+    staminaLastRegen:Date.now(),
+    missions:{date:todayStr(), progress:{m1:0,m2:0,m3:0}, claimed:{m1:false,m2:false,m3:false}},
+    loginStreak:{lastDate:"", streak:0, claimedToday:false},
+    lastSeenTs:Date.now(),
+    tutorialDone:false,
+    soundOn:true,
+    battleWins:0
+  };
+}
+
+var state = null;
+
+function saveGame(){
+  try{
+    state.lastSeenTs = Date.now();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }catch(e){ /* 저장 실패해도 게임은 계속 진행 */ }
+}
+
+function loadGame(){
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+
+function pad(n){ return n<10 ? "0"+n : ""+n; }
+function todayStr(){ var d=new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function yesterdayStr(){ var d=new Date(); d.setDate(d.getDate()-1); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+
+/* =========================================================
+   4) 오디오 (Web Audio, 외부 파일 없음 / 첫 탭 전에는 소리 없음)
+   ========================================================= */
+var audioCtx = null;
+function ensureAudio(){
+  if(!audioCtx){
+    try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ audioCtx=null; }
+  }
+  if(audioCtx && audioCtx.state === "suspended"){ audioCtx.resume(); }
+}
+function tone(opt){
+  if(!state || !state.soundOn || !audioCtx) return;
+  var freq=opt.freq||440, dur=opt.dur||0.15, type=opt.type||"sine", vol=opt.vol||0.2, delay=opt.delay||0, freqEnd=opt.freqEnd||null;
+  var t0 = audioCtx.currentTime + delay;
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  if(freqEnd!=null) osc.frequency.linearRampToValueAtTime(freqEnd, t0+dur);
+  gain.gain.setValueAtTime(vol, t0);
+  gain.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.start(t0); osc.stop(t0+dur+0.02);
+}
+function playSfxTap(){ tone({freq:900,dur:0.04,type:"square",vol:0.08}); }
+function playSfxHit(){ tone({freq:220,dur:0.08,type:"square",vol:0.12}); }
+function playSfxCrit(){ tone({freq:1300,dur:0.1,type:"sine",vol:0.2}); tone({freq:1700,dur:0.08,type:"sine",vol:0.12,delay:0.04}); }
+function playSfxUltimate(){ tone({freq:260,dur:0.3,type:"sawtooth",vol:0.18,freqEnd:900}); tone({freq:120,dur:0.35,type:"sawtooth",vol:0.2,delay:0.05}); }
+function playSfxLevelup(){ [440,550,660,880].forEach(function(f,i){ tone({freq:f,dur:0.12,type:"triangle",vol:0.15,delay:i*0.07}); }); }
+function playSfxBoss(){ tone({freq:90,dur:0.6,type:"sawtooth",vol:0.25}); tone({freq:70,dur:0.6,type:"sawtooth",vol:0.2,delay:0.12}); }
+function playSfxVictory(){ [523,659,784,1046].forEach(function(f,i){ tone({freq:f,dur:0.18,type:"triangle",vol:0.18,delay:i*0.09}); }); }
+function playSfxSummon(rarity){
+  var base = rarity==="epic" ? 950 : (rarity==="rare" ? 650 : 440);
+  tone({freq:base,dur:0.25,type:"sine",vol:0.18,freqEnd:base*1.4});
+  if(rarity==="epic"){ tone({freq:base*1.5,dur:0.3,type:"sine",vol:0.14,delay:0.08}); tone({freq:base*2,dur:0.25,type:"sine",vol:0.1,delay:0.16}); }
+}
+
+/* =========================================================
+   5) 전투 엔진
+   ========================================================= */
+var TICK_MS = 800;
+var GAUGE_PER_TICK = 18;
+var AUTO_FIRE_TICKS = 3; // 게이지가 꽉 찬 뒤 플레이어가 안 누르면 이 틱수 후 자동 발동(보너스 없음)
+
+var battle = {
+  mode:"normal", // normal | boss
+  bossZoneIdx:null,
+  enemy:null,
+  partyHp:{},
+  gauge:0,
+  ultimateReady:false,
+  ultimateReadyTicks:0,
+  log:[]
+};
+
+function spawnEnemyForStage(n){
+  var zoneIdx = zoneIndexOfStage(n);
+  var zone = getZone(zoneIdx);
+  var hp = monsterHP(n);
+  return {name:zone.monster.name, icon:zone.monster.icon, hp:hp, maxHp:hp, atk:monsterATK(n), isBoss:false, stageN:n, zoneIdx:zoneIdx};
+}
+function spawnBossForZone(zoneIdx){
+  var lastN = zoneLastStageNum(zoneIdx);
+  var hp = monsterHP(lastN) * 3.5;
+  var atk = monsterATK(lastN) * 1.8;
+  var zone = getZone(zoneIdx);
+  return {name:zone.boss.name, icon:zone.boss.icon, hp:hp, maxHp:hp, atk:atk, isBoss:true, zoneIdx:zoneIdx};
+}
+
+function partyMemberStats(id){
+  var m = MERCS[id];
+  var lvl = state.mercs[id].level || 1;
+  var s = computeStats(id, lvl);
+  s.id = id; s.role = m.role; s.name = m.name; s.rarity = m.rarity;
+  return s;
+}
+
+function healPartyFull(){
+  battle.partyHp = {};
+  state.party.forEach(function(id){
+    if(!id) return;
+    var s = partyMemberStats(id);
+    battle.partyHp[id] = s.hp;
+  });
+}
+
+function aliveMembers(){
+  var list = [];
+  state.party.forEach(function(id){
+    if(!id) return;
+    var hp = battle.partyHp[id];
+    if(hp == null) { var s=partyMemberStats(id); battle.partyHp[id]=s.hp; hp=s.hp; }
+    if(hp > 0){
+      var st = partyMemberStats(id);
+      st.hp = hp; st.maxHp = (function(){ return partyMemberStats(id).hp; })();
+      list.push(st);
+    }
+  });
+  return list;
+}
+
+function randomChoice(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function appendLog(text){
+  battle.log.push(text);
+  if(battle.log.length > 40) battle.log.shift();
+  renderLog();
+}
+
+function healLowestAlly(healer){
+  var list = aliveMembers();
+  if(list.length===0) return;
+  var lowest = list[0];
+  var lowestPct = 2;
+  list.forEach(function(m){
+    var pct = m.hp / m.maxHp;
+    if(pct < lowestPct){ lowestPct = pct; lowest = m; }
+  });
+  if(lowestPct >= 0.999) return; // 만피면 회복 불필요
+  var heal = healer.atk * 1.0;
+  var cur = battle.partyHp[lowest.id];
+  var max = lowest.maxHp;
+  battle.partyHp[lowest.id] = Math.min(max, cur + heal);
+}
+
+function totalWeaponBonus(){ return weaponAtkBonus(state.weaponLevel); }
+
+function ensureEnemy(){
+  if(!battle.enemy){
+    if(battle.mode === "boss" && battle.bossZoneIdx != null){
+      battle.enemy = spawnBossForZone(battle.bossZoneIdx);
+    } else {
+      battle.mode = "normal";
+      battle.enemy = spawnEnemyForStage(state.currentStage);
+    }
+  }
+}
+
+function gameTick(){
+  if(!state) return;
+  regenStamina();
+  ensureEnemy();
+  var members = aliveMembers();
+  if(members.length === 0){
+    handleWipe();
+    renderBattle(); renderUltimate();
+    return;
+  }
+
+  var totalDamage = 0;
+  members.forEach(function(m){
+    if(m.role === "healer"){
+      healLowestAlly(m);
+    } else {
+      var dmg = m.atk;
+      if(m.role === "rogue" && Math.random() < 0.15){
+        dmg *= 1.5;
+        playSfxCrit();
+      }
+      totalDamage += dmg;
+    }
+  });
+  totalDamage += totalWeaponBonus();
+  if(totalDamage > 0){
+    battle.enemy.hp -= totalDamage;
+    playSfxHit();
+    appendLog("파티가 " + battle.enemy.name + "에게 " + Math.round(totalDamage) + " 피해!");
+  }
+
+  updateGauge(GAUGE_PER_TICK);
+
+  // updateGauge()가 자동 필살기를 발동시켜 적을 처치하면 battle.enemy가 이미 null이 될 수 있다.
+  if(!battle.enemy){
+    renderBattle(); renderUltimate(); renderTop();
+    return;
+  }
+  if(battle.enemy.hp <= 0){
+    onEnemyDefeated();
+    renderBattle(); renderUltimate(); renderTop();
+    return;
+  }
+
+  // 적의 공격
+  var aliveNow = aliveMembers();
+  if(aliveNow.length > 0){
+    var target = randomChoice(aliveNow);
+    var edmg = battle.enemy.atk - target.def*0.5;
+    if(edmg < 1) edmg = 1;
+    if(target.role === "tanker") edmg *= 0.9;
+    battle.partyHp[target.id] = Math.max(0, battle.partyHp[target.id] - edmg);
+    if(battle.partyHp[target.id] <= 0){
+      appendLog(target.name + "이 쓰러졌다!");
+    }
+  }
+
+  if(aliveMembers().length === 0){
+    handleWipe();
+  }
+
+  renderBattle();
+  renderUltimate();
+}
+
+function updateGauge(amount){
+  if(battle.ultimateReady){
+    battle.ultimateReadyTicks++;
+    if(battle.ultimateReadyTicks >= AUTO_FIRE_TICKS){
+      fireUltimate(false);
+    }
+    return;
+  }
+  battle.gauge = Math.min(100, battle.gauge + amount);
+  if(battle.gauge >= 100){
+    battle.ultimateReady = true;
+    battle.ultimateReadyTicks = 0;
+  }
+}
+
+function fireUltimate(manual){
+  if(!battle.ultimateReady || !battle.enemy) return;
+  var members = aliveMembers();
+  if(members.length === 0) return;
+  var totalAtk = 0;
+  members.forEach(function(m){ if(m.role !== "healer") totalAtk += m.atk; else totalAtk += m.atk*0.5; });
+  totalAtk += totalWeaponBonus();
+  var bonus = manual ? 1.2 : 1.0; // 직접 탭하면 +20%
+  var dmg = totalAtk * 2.0 * bonus;
+  battle.enemy.hp -= dmg;
+  playSfxUltimate();
+  appendLog((manual ? "★필살기(직접 발동)★ " : "★필살기(자동 발동)★ ") + battle.enemy.name + "에게 " + Math.round(dmg) + " 피해!");
+  battle.gauge = 0;
+  battle.ultimateReady = false;
+  battle.ultimateReadyTicks = 0;
+  if(battle.enemy.hp <= 0){
+    onEnemyDefeated();
+    renderTop();
+  }
+  renderBattle();
+  renderUltimate();
+}
+
+function onEnemyDefeated(){
+  var e = battle.enemy;
+  if(e.isBoss){ handleBossVictory(e); } else { handleStageVictory(e); }
+}
+
+function handleStageVictory(e){
+  var n = e.stageN;
+  var gold = goldReward(n);
+  state.gold += gold;
+  var ticketGain = 0;
+  if(!state.stageFirstClear[n]){
+    state.stageFirstClear[n] = true;
+    ticketGain = 3;
+    state.tickets += 3;
+  }
+  var monKey = "mon_" + e.zoneIdx;
+  state.monsterKillCount[monKey] = (state.monsterKillCount[monKey]||0) + 1;
+  state.battleWins = (state.battleWins||0) + 1;
+  if(state.missions.progress.m1 < MISSION_TARGETS.m1) state.missions.progress.m1++;
+  appendLog(e.name + "을 물리쳤다! +" + gold + "골드" + (ticketGain ? (" +"+ticketGain+"용병표") : ""));
+  playSfxVictory();
+
+  if(n === state.maxUnlockedStage && state.maxUnlockedStage < 20){
+    state.maxUnlockedStage++;
+    state.currentStage = state.maxUnlockedStage;
+    appendLog("다음 스테이지로 진행합니다 (" + state.currentStage + "/20)");
+  }
+  battle.enemy = null;
+  saveGame();
+  renderPanelIfOpen();
+}
+
+function handleBossVictory(e){
+  var zoneIdx = e.zoneIdx;
+  var lastN = zoneLastStageNum(zoneIdx);
+  var gold = goldReward(lastN) * 2;
+  state.gold += gold;
+  var ticketGain;
+  if(!state.bossFirstClear[zoneIdx]){
+    state.bossFirstClear[zoneIdx] = true;
+    ticketGain = 20;
+  } else {
+    ticketGain = 2;
+  }
+  state.tickets += ticketGain;
+  var bossKey = "boss_" + zoneIdx;
+  state.monsterKillCount[bossKey] = (state.monsterKillCount[bossKey]||0) + 1;
+  appendLog(e.name + "을 쓰러뜨렸다! +" + gold + "골드 +" + ticketGain + "용병표");
+  playSfxVictory();
+  battle.mode = "normal";
+  battle.bossZoneIdx = null;
+  battle.enemy = null;
+  healPartyFull();
+  saveGame();
+  renderPanelIfOpen();
+}
+
+function handleWipe(){
+  if(battle.mode === "boss"){
+    appendLog("파티가 쓰러졌다... " + (battle.enemy ? battle.enemy.name : "보스") + "에게 패배했다.");
+    battle.mode = "normal";
+    battle.bossZoneIdx = null;
+    battle.enemy = null;
+  } else {
+    appendLog("파티가 쓰러졌다... 전열을 정비한다.");
+  }
+  healPartyFull();
+}
+
+function startBossChallenge(){
+  var zoneIdx = zoneIndexOfStage(state.currentStage);
+  var lastN = zoneLastStageNum(zoneIdx);
+  if(!state.stageFirstClear[lastN]){ toast("아직 이 구역의 보스가 나타나지 않았습니다"); return; }
+  if(state.stamina < 1){ toast("스태미나가 부족합니다"); return; }
+  state.stamina -= 1;
+  if(state.missions.progress.m3 < MISSION_TARGETS.m3) state.missions.progress.m3++;
+  var zone = getZone(zoneIdx);
+  battle.mode = "boss";
+  battle.bossZoneIdx = zoneIdx;
+  battle.enemy = spawnBossForZone(zoneIdx);
+  battle.gauge = 0; battle.ultimateReady = false; battle.ultimateReadyTicks = 0;
+  healPartyFull();
+  playSfxBoss();
+  toast(zone.boss.line || (zone.boss.name + "이(가) 나타났다!"));
+  appendLog("⚔️ 보스전 시작: " + zone.boss.name);
+  saveGame();
+  renderBattle(); renderTop();
+}
+
+function regenStamina(){
+  var now = Date.now();
+  if(state.stamina >= STAMINA_MAX){ state.staminaLastRegen = now; return; }
+  var elapsed = now - (state.staminaLastRegen || now);
+  var gained = Math.floor(elapsed / STAMINA_REGEN_MS);
+  if(gained > 0){
+    state.stamina = Math.min(STAMINA_MAX, state.stamina + gained);
+    state.staminaLastRegen += gained * STAMINA_REGEN_MS;
+  }
+}
+
+/* =========================================================
+   6) 소환 / 강화 / 레벨업 / 파티 편성
+   ========================================================= */
+function rollRarity(){
+  var r = Math.random();
+  if(r < RARITIES.epic.rate) return "epic";
+  if(r < RARITIES.epic.rate + RARITIES.rare.rate) return "rare";
+  return "common";
+}
+function rollRole(){ return ROLE_ORDER[Math.floor(Math.random()*ROLE_ORDER.length)]; }
+
+function doSummon(count){
+  var cost = count === 10 ? 90 : 10;
+  if(state.tickets < cost){ toast("용병표가 부족합니다 (" + cost + "표 필요)"); return; }
+  state.tickets -= cost;
+  var results = [];
+  for(var i=0;i<count;i++){
+    var rarity = rollRarity();
+    var role = rollRole();
+    var id = role + "_" + rarity;
+    var already = state.mercs[id].owned;
+    if(already){
+      var mat = MATERIAL_BY_RARITY[rarity];
+      state.materials += mat;
+      results.push({id:id, dup:true, mat:mat});
+    } else {
+      state.mercs[id].owned = true;
+      state.mercs[id].level = 1;
+      results.push({id:id, dup:false});
+    }
+  }
+  saveGame();
+  results.forEach(function(r,i){ setTimeout(function(){ playSfxSummon(MERCS[r.id].rarity); }, i*150); });
+  showSummonResult(results);
+  renderTop();
+  renderPanelIfOpen();
+}
+
+function upgradeWeapon(){
+  if(state.weaponLevel >= 50){ toast("무기가 이미 최대 레벨입니다"); return; }
+  var next = state.weaponLevel + 1;
+  var cost = weaponCost(next);
+  if(state.gold < cost){ toast("골드가 부족합니다"); return; }
+  state.gold -= cost;
+  state.weaponLevel = next;
+  if(state.missions.progress.m2 < MISSION_TARGETS.m2) state.missions.progress.m2++;
+  playSfxLevelup();
+  saveGame();
+  renderTop(); renderPanelIfOpen();
+}
+
+function levelUpMerc(id){
+  var m = state.mercs[id];
+  if(!m || !m.owned) return;
+  if(m.level >= 60){ toast("이미 최대 레벨입니다"); return; }
+  var next = m.level + 1;
+  var baseCost = mercLevelCost(next);
+  // 강화재료 사용처 [결정]: 밸런스 문서가 사용처를 "용병 레벨업 보조재료"로 제안했으나 구체 비율이 없어
+  // 가장 단순한 방식을 채택한다 — 재료 1개 = 골드 2 할인, 최대 70%까지 자동 할인(재료가 있으면 먼저 소모).
+  var maxDiscount = Math.floor(baseCost * 0.7);
+  var matUsable = Math.min(state.materials, Math.floor(maxDiscount / 2));
+  var discount = matUsable * 2;
+  var finalCost = baseCost - discount;
+  if(state.gold < finalCost){ toast("골드가 부족합니다 (" + finalCost + "골드 필요)"); return; }
+  state.gold -= finalCost;
+  state.materials -= matUsable;
+  m.level = next;
+  if(state.missions.progress.m2 < MISSION_TARGETS.m2) state.missions.progress.m2++;
+  playSfxLevelup();
+  healPartyFull();
+  saveGame();
+  renderTop(); renderPanelIfOpen(); renderBattle();
+}
+
+function assignToSlot(slotIdx, mercId){
+  var existingIdx = state.party.indexOf(mercId);
+  if(existingIdx !== -1 && existingIdx !== slotIdx){
+    state.party[existingIdx] = state.party[slotIdx];
+  }
+  state.party[slotIdx] = mercId;
+  healPartyFull();
+  saveGame();
+  renderPanelIfOpen();
+  renderBattle();
+}
+
+function claimMission(key){
+  if(state.missions.progress[key] < MISSION_TARGETS[key]) return;
+  if(state.missions.claimed[key]) return;
+  state.missions.claimed[key] = true;
+  state.tickets += 1;
+  playSfxLevelup();
+  saveGame(); renderTop(); renderPanelIfOpen();
+}
+
+function claimLogin(){
+  if(state.loginStreak.claimedToday) return;
+  var idx = (state.loginStreak.streak - 1) % 7;
+  if(idx < 0) idx = 0;
+  var reward = LOGIN_REWARDS[idx];
+  state.tickets += reward;
+  state.loginStreak.claimedToday = true;
+  playSfxLevelup();
+  saveGame(); renderTop(); renderPanelIfOpen();
+}
+
+/* =========================================================
+   7) 날짜 기반 리셋 / 오프라인 보상
+   ========================================================= */
+function checkDailyReset(){
+  var today = todayStr();
+  if(state.missions.date !== today){
+    state.missions.date = today;
+    state.missions.progress = {m1:0,m2:0,m3:0};
+    state.missions.claimed = {m1:false,m2:false,m3:false};
+  }
+  if(state.loginStreak.lastDate !== today){
+    var y = yesterdayStr();
+    if(state.loginStreak.lastDate === y){ state.loginStreak.streak += 1; }
+    else { state.loginStreak.streak = 1; }
+    state.loginStreak.lastDate = today;
+    state.loginStreak.claimedToday = false;
+  }
+}
+
+function applyOfflineReward(){
+  var now = Date.now();
+  var last = state.lastSeenTs || now;
+  var elapsedMin = Math.floor((now-last)/60000);
+  if(elapsedMin < 1) return;
+  var capped = Math.min(480, elapsedMin); // 최대 8시간
+  var perClear = goldReward(state.maxUnlockedStage);
+  var goldGain = Math.round((perClear/3) * 0.5 * capped);
+  if(goldGain > 0){
+    state.gold += goldGain;
+    document.getElementById("offlineText").textContent =
+      "방치한 동안 " + capped + "분이 지나 " + goldGain.toLocaleString("ko-KR") + "골드를 모았습니다.";
+    document.getElementById("offlineOverlay").classList.add("show");
+  }
+}
+
+/* =========================================================
+   8) 렌더링
+   ========================================================= */
+function fmt(n){ return Math.round(n).toLocaleString("ko-KR"); }
+
+function renderTop(){
+  document.getElementById("topStage").textContent = "스테이지 " + state.currentStage + "/20";
+  document.getElementById("topGold").textContent = fmt(state.gold);
+  document.getElementById("topTickets").textContent = fmt(state.tickets);
+}
+
+function renderBattle(){
+  ensureEnemy(); // 새로고침/스테이지 이동 직후에도 첫 틱을 기다리지 않고 즉시 적을 채운다
+  if(!battle.enemy) return;
+  var zoneIdx = zoneIndexOfStage(state.currentStage);
+  var zone = getZone(zoneIdx);
+  var stageInZone = ((state.currentStage-1)%4)+1;
+  var label = battle.mode === "boss"
+    ? ("<span class='zone'>" + zone.name + "</span> · 보스전")
+    : ("<span class='zone'>" + zone.name + "</span> · " + stageInZone + "/4 (전체 " + state.currentStage + "/20)");
+  document.getElementById("stageLabel").innerHTML = label;
+  document.getElementById("stagePrev").disabled = (state.currentStage <= 1) || battle.mode==="boss";
+  document.getElementById("stageNext").disabled = (state.currentStage >= state.maxUnlockedStage) || battle.mode==="boss";
+
+  var lastN = zoneLastStageNum(zoneIdx);
+  var bossBtn = document.getElementById("bossBtn");
+  if(state.stageFirstClear[lastN] && battle.mode !== "boss"){
+    bossBtn.classList.remove("hidden");
+    bossBtn.textContent = "👑 보스전 도전 (스태미나 " + state.stamina + "/" + STAMINA_MAX + ")";
+    bossBtn.disabled = state.stamina < 1;
+  } else {
+    bossBtn.classList.add("hidden");
+  }
+
+  // 파티
+  var partyCol = document.getElementById("partyCol");
+  partyCol.innerHTML = "";
+  state.party.forEach(function(id){
+    if(!id) return;
+    var def = MERCS[id];
+    var role = ROLES[def.role];
+    var hp = battle.partyHp[id] != null ? battle.partyHp[id] : 0;
+    var maxHp = partyMemberStats(id).hp;
+    var pct = Math.max(0, Math.min(100, (hp/maxHp)*100));
+    var dead = hp <= 0;
+    var div = document.createElement("div");
+    div.className = "unitChip" + (dead ? " deadChip" : "");
+    div.innerHTML =
+      "<div class='uic'>" + role.icon + "</div>" +
+      "<div class='ubars'>" +
+        "<div class='uname'>" + def.name + " Lv." + (state.mercs[id].level||1) + "</div>" +
+        "<div class='hpbarWrap'><div class='hpbarFill" + (dead?" dead":"") + "' style='width:" + pct + "%'></div></div>" +
+      "</div>";
+    partyCol.appendChild(div);
+  });
+
+  // 적
+  var e = battle.enemy;
+  document.getElementById("enemyIcon").textContent = e.icon;
+  document.getElementById("enemyName").textContent = e.name + (e.isBoss ? " (보스)" : "");
+  var epct = Math.max(0, Math.min(100, (e.hp/e.maxHp)*100));
+  document.getElementById("enemyHpFill").style.width = epct + "%";
+  document.getElementById("enemyHpText").textContent = fmt(Math.max(0,e.hp)) + " / " + fmt(e.maxHp);
+}
+
+function renderLog(){
+  var box = document.getElementById("logBox");
+  box.innerHTML = battle.log.slice(-8).map(function(t){ return "<div>"+escapeHtml(t)+"</div>"; }).join("");
+  box.scrollTop = box.scrollHeight;
+}
+
+function renderUltimate(){
+  var pct = battle.ultimateReady ? 100 : battle.gauge;
+  var ring = document.getElementById("ultiRing");
+  ring.style.background = "conic-gradient(var(--gold) " + pct + "%, #2a3650 " + pct + "%)";
+  if(battle.ultimateReady) ring.classList.add("ready"); else ring.classList.remove("ready");
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>]/g, function(c){ return c==="&"?"&amp;":(c==="<"?"&lt;":"&gt;"); });
+}
+
+function toast(msg){
+  var el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(function(){ el.classList.remove("show"); }, 2000);
+}
+
+/* ===== 패널(파티/강화/소환/임무/도감) ===== */
+var currentPanel = null;
+var selectedSlotIdx = null;
+var codexSubTab = "merc";
+
+function openPanel(key){
+  currentPanel = key;
+  selectedSlotIdx = null;
+  document.getElementById("panelOverlay").classList.add("show");
+  updateTabActive();
+  renderPanelBody();
+}
+function closePanel(){
+  currentPanel = null;
+  document.getElementById("panelOverlay").classList.remove("show");
+  updateTabActive();
+}
+function renderPanelIfOpen(){ if(currentPanel) renderPanelBody(); }
+function updateTabActive(){
+  var btns = document.querySelectorAll("#tabbar button");
+  btns.forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-tab")===currentPanel); });
+}
+
+var PANEL_TITLES = {party:"파티 편성", enhance:"강화", summon:"소환", mission:"임무 · 출석", codex:"도감"};
+
+function renderPanelBody(){
+  document.getElementById("panelTitle").textContent = PANEL_TITLES[currentPanel] || "-";
+  var body = document.getElementById("panelBody");
+  if(currentPanel === "party") body.innerHTML = renderPartyPanel();
+  else if(currentPanel === "enhance") body.innerHTML = renderEnhancePanel();
+  else if(currentPanel === "summon") body.innerHTML = renderSummonPanel();
+  else if(currentPanel === "mission") body.innerHTML = renderMissionPanel();
+  else if(currentPanel === "codex") body.innerHTML = renderCodexPanel();
+}
+
+function ownedMercList(){
+  return Object.keys(MERCS).filter(function(id){ return state.mercs[id].owned; });
+}
+
+function renderPartyPanel(){
+  var html = "<div class='slotRow'>";
+  for(var i=0;i<3;i++){
+    var id = state.party[i];
+    var sel = selectedSlotIdx === i;
+    if(id){
+      var def = MERCS[id];
+      html += "<button class='slotBox" + (sel?" selected":"") + "' data-action='pickSlot' data-slot='" + i + "'>" +
+        "<div class='sic'>" + ROLES[def.role].icon + "</div>" +
+        "<div class='sname'>" + def.name + "</div>" +
+        "<div class='slv'>Lv." + state.mercs[id].level + "</div></button>";
+    } else {
+      html += "<button class='slotBox" + (sel?" selected":"") + "' data-action='pickSlot' data-slot='" + i + "'>" +
+        "<div class='sic'>➕</div><div class='sname'>빈 슬롯</div></button>";
+    }
+  }
+  html += "</div>";
+  html += "<div class='sectionTitle'>" + (selectedSlotIdx!=null ? "슬롯 "+(selectedSlotIdx+1)+"에 배치할 용병을 고르세요" : "슬롯을 먼저 선택하세요") + "</div>";
+  var owned = ownedMercList();
+  owned.forEach(function(id){
+    var def = MERCS[id];
+    var role = ROLES[def.role];
+    var inParty = state.party.indexOf(id) !== -1;
+    html += "<div class='mercRow' data-action='" + (selectedSlotIdx!=null ? "assignMerc" : "") + "' data-id='" + id + "' style='" + (selectedSlotIdx!=null?"cursor:pointer;":"") + "'>" +
+      "<div class='mic'>" + role.icon + "</div>" +
+      "<div class='minfo'><div class='mname'>" + def.name + "<span class='badge " + def.rarity + "'>" + RARITIES[def.rarity].ko + "</span></div>" +
+      "<div class='mmeta'>" + role.ko + " · Lv." + state.mercs[id].level + (inParty?" · 편성중":"") + "</div></div>" +
+      "</div>";
+  });
+  return html;
+}
+
+function renderEnhancePanel(){
+  var wl = state.weaponLevel;
+  var next = wl+1;
+  var cost = wl<50 ? weaponCost(next) : null;
+  var html = "<div class='sectionTitle'>무기 강화</div>";
+  html += "<div class='mercRow'>" +
+    "<div class='mic'>🗡️</div>" +
+    "<div class='minfo'><div class='mname'>단장의 무기 Lv." + wl + "</div>" +
+    "<div class='mmeta'>공격력 보너스 +" + weaponAtkBonus(wl) + (cost?(" · 다음 레벨 비용 " + fmt(cost) + "골드"):" · 최대 레벨") + "</div></div>" +
+    "<button class='btnPrimary' data-action='upgradeWeapon' " + (cost==null||state.gold<cost?"disabled":"") + ">강화</button>" +
+    "</div>";
+
+  html += "<div class='sectionTitle'>용병 레벨업 (재료가 있으면 자동으로 할인 적용)</div>";
+  var owned = ownedMercList();
+  owned.forEach(function(id){
+    var def = MERCS[id];
+    var role = ROLES[def.role];
+    var lvl = state.mercs[id].level;
+    var maxed = lvl>=60;
+    var nextLv = lvl+1;
+    var baseCost = maxed? 0 : mercLevelCost(nextLv);
+    var maxDiscount = Math.floor(baseCost*0.7);
+    var matUsable = maxed?0:Math.min(state.materials, Math.floor(maxDiscount/2));
+    var finalCost = baseCost - matUsable*2;
+    html += "<div class='mercRow'>" +
+      "<div class='mic'>" + role.icon + "</div>" +
+      "<div class='minfo'><div class='mname'>" + def.name + "<span class='badge " + def.rarity + "'>" + RARITIES[def.rarity].ko + "</span></div>" +
+      "<div class='mmeta'>" + (maxed?"최대 레벨":("Lv."+lvl+" → "+nextLv+" · "+fmt(finalCost)+"골드" + (matUsable>0?(" (재료 "+matUsable+"개 사용)"):""))) + "</div></div>" +
+      "<button class='btnPrimary' data-action='levelUpMerc' data-id='" + id + "' " + (maxed||state.gold<finalCost?"disabled":"") + ">레벨업</button>" +
+      "</div>";
+  });
+  html += "<div class='sectionTitle'>보유 강화재료: " + fmt(state.materials) + "개</div>";
+  return html;
+}
+
+function renderSummonPanel(){
+  var html = "<div class='sectionTitle'>보유 용병표: " + fmt(state.tickets) + "표</div>";
+  html += "<p style='font-size:12px;color:var(--sub);line-height:1.6;'>일반 70% · 희귀 24% · 영웅 6% 확률로 용병이 소환됩니다. 이미 보유한 용병이 나오면 강화재료로 환전됩니다. (실제 결제는 없습니다 — 용병표는 전투·임무·출석으로만 얻습니다)</p>";
+  html += "<div class='row' style='margin-top:10px;gap:10px;'>" +
+    "<button class='btnPrimary' style='flex:1' data-action='summon1' " + (state.tickets<10?"disabled":"") + ">1회 소환 (10표)</button>" +
+    "<button class='btnPrimary' style='flex:1' data-action='summon10' " + (state.tickets<90?"disabled":"") + ">10연속 소환 (90표)</button>" +
+    "</div>";
+  return html;
+}
+
+function renderMissionPanel(){
+  var html = "<div class='sectionTitle'>오늘의 임무</div>";
+  var defs = [
+    {key:"m1", title:"전투 승리 5회", target:MISSION_TARGETS.m1},
+    {key:"m2", title:"강화(무기·용병) 2회", target:MISSION_TARGETS.m2},
+    {key:"m3", title:"보스 도전 1회", target:MISSION_TARGETS.m3}
+  ];
+  defs.forEach(function(d){
+    var prog = state.missions.progress[d.key];
+    var done = prog >= d.target;
+    var claimed = state.missions.claimed[d.key];
+    var pct = Math.min(100, (prog/d.target)*100);
+    html += "<div class='missionRow'>" +
+      "<div class='mtitle'>" + d.title + " <span style='color:var(--gold)'>+1🎫</span></div>" +
+      "<div class='mprog'>" + Math.min(prog,d.target) + " / " + d.target + "</div>" +
+      "<div class='progBarWrap'><div class='progBarFill' style='width:" + pct + "%'></div></div>" +
+      "<button class='btnPrimary' data-action='claimMission' data-id='" + d.key + "' style='width:100%' " + (!done||claimed?"disabled":"") + ">" + (claimed?"수령 완료":"보상 받기") + "</button>" +
+      "</div>";
+  });
+
+  html += "<div class='sectionTitle'>7일 출석</div>";
+  html += "<div class='loginGrid'>";
+  for(var i=0;i<7;i++){
+    var dayNum = i+1;
+    var curIdx = (state.loginStreak.streak-1)%7;
+    var isPastInCycle = i < curIdx || (i===curIdx && state.loginStreak.claimedToday);
+    var isToday = i === curIdx && !state.loginStreak.claimedToday;
+    html += "<div class='loginDay" + (isPastInCycle?" done":"") + (isToday?" today":"") + "'>" +
+      dayNum + "일<br>🎫" + LOGIN_REWARDS[i] + "</div>";
+  }
+  html += "</div>";
+  html += "<button class='btnPrimary' style='width:100%' data-action='claimLogin' " + (state.loginStreak.claimedToday?"disabled":"") + ">" + (state.loginStreak.claimedToday?"오늘 출석 완료":"출석 보상 받기") + "</button>";
+  return html;
+}
+
+function renderCodexPanel(){
+  var html = "<div class='subtabs'>" +
+    "<button data-action='codexSub' data-id='merc' class='" + (codexSubTab==="merc"?"active":"") + "'>용병 도감</button>" +
+    "<button data-action='codexSub' data-id='mon' class='" + (codexSubTab==="mon"?"active":"") + "'>몬스터 도감</button>" +
+    "</div>";
+  if(codexSubTab === "merc"){
+    html += "<div class='codexGrid'>";
+    ROLE_ORDER.forEach(function(role){
+      RARITY_ORDER.forEach(function(rk){
+        var id = role+"_"+rk;
+        var def = MERCS[id];
+        var owned = state.mercs[id].owned;
+        html += "<div class='codexCard" + (owned?"":" locked") + "'>" +
+          "<div class='cic'>" + (owned?ROLES[role].icon:"❓") + "</div>" +
+          "<div class='cname'>" + (owned?def.name:"???") + "</div>" +
+          "<div class='clv'>" + (owned?(RARITIES[rk].ko+" · Lv."+state.mercs[id].level):RARITIES[rk].ko) + "</div>" +
+          "</div>";
+      });
+    });
+    html += "</div>";
+  } else {
+    html += "<div class='codexGrid'>";
+    ZONES.forEach(function(zone, idx){
+      var monKey = "mon_"+idx;
+      var cnt = state.monsterKillCount[monKey]||0;
+      html += "<div class='codexCard" + (cnt>0?"":" locked") + "'>" +
+        "<div class='cic'>" + (cnt>0?zone.monster.icon:"❓") + "</div>" +
+        "<div class='cname'>" + (cnt>0?zone.monster.name:"???") + "</div>" +
+        "<div class='clv'>처치 " + cnt + "</div></div>";
+    });
+    ZONES.forEach(function(zone, idx){
+      var bossKey = "boss_"+idx;
+      var cnt = state.monsterKillCount[bossKey]||0;
+      html += "<div class='codexCard" + (cnt>0?"":" locked") + "'>" +
+        "<div class='cic'>" + (cnt>0?zone.boss.icon:"❓") + "</div>" +
+        "<div class='cname'>" + (cnt>0?zone.boss.name:"???") + "</div>" +
+        "<div class='clv'>처치 " + cnt + "</div></div>";
+    });
+    html += "</div>";
+  }
+  return html;
+}
+
+function showSummonResult(results){
+  var list = document.getElementById("summonResultList");
+  list.innerHTML = results.map(function(r){
+    var def = MERCS[r.id];
+    var role = ROLES[def.role];
+    var rarity = RARITIES[def.rarity];
+    var right = r.dup ? ("중복 → 재료 +" + r.mat) : "신규 획득!";
+    return "<div class='summonResultItem'><div class='sic'>" + role.icon + "</div>" +
+      "<div style='flex:1'><b>" + def.name + "</b><span class='badge " + def.rarity + "'>" + rarity.ko + "</span>" +
+      "<div style='font-size:11px;color:var(--sub)'>" + right + "</div></div></div>";
+  }).join("");
+  document.getElementById("summonOverlay").classList.add("show");
+}
+
+/* =========================================================
+   9) 이벤트 바인딩
+   ========================================================= */
+function bindOnce(){
+  document.addEventListener("click", ensureAudio, {once:true});
+
+  document.getElementById("soundBtn").addEventListener("click", function(){
+    ensureAudio();
+    state.soundOn = !state.soundOn;
+    this.textContent = state.soundOn ? "🔊" : "🔇";
+    if(state.soundOn) playSfxTap();
+    saveGame();
+  });
+
+  document.getElementById("stagePrev").addEventListener("click", function(){
+    ensureAudio(); playSfxTap();
+    if(state.currentStage>1 && battle.mode!=="boss"){
+      state.currentStage--; battle.enemy=null; healPartyFull();
+      battle.gauge=0; battle.ultimateReady=false; battle.ultimateReadyTicks=0;
+      saveGame(); renderBattle(); renderTop();
+    }
+  });
+  document.getElementById("stageNext").addEventListener("click", function(){
+    ensureAudio(); playSfxTap();
+    if(state.currentStage<state.maxUnlockedStage && battle.mode!=="boss"){
+      state.currentStage++; battle.enemy=null; healPartyFull();
+      battle.gauge=0; battle.ultimateReady=false; battle.ultimateReadyTicks=0;
+      saveGame(); renderBattle(); renderTop();
+    }
+  });
+  document.getElementById("bossBtn").addEventListener("click", function(){
+    ensureAudio(); playSfxTap();
+    startBossChallenge();
+  });
+
+  document.getElementById("ultiBtn").addEventListener("click", function(){
+    ensureAudio();
+    if(!battle.ultimateReady){ playSfxTap(); toast("게이지가 아직 다 차지 않았습니다"); return; }
+    fireUltimate(true);
+  });
+
+  var tabbar = document.getElementById("tabbar");
+  tabbar.addEventListener("click", function(e){
+    var btn = e.target.closest("button[data-tab]");
+    if(!btn) return;
+    ensureAudio(); playSfxTap();
+    var key = btn.getAttribute("data-tab");
+    if(currentPanel === key){ closePanel(); } else { openPanel(key); }
+  });
+
+  document.getElementById("panelClose").addEventListener("click", function(){
+    ensureAudio(); playSfxTap();
+    closePanel();
+  });
+  document.getElementById("panelOverlay").addEventListener("click", function(e){
+    if(e.target.id === "panelOverlay"){ closePanel(); }
+  });
+
+  document.getElementById("panelBody").addEventListener("click", function(e){
+    var target = e.target.closest("[data-action]");
+    if(!target) return;
+    var action = target.getAttribute("data-action");
+    var id = target.getAttribute("data-id");
+    ensureAudio();
+    if(action === "pickSlot"){
+      playSfxTap();
+      var slot = parseInt(target.getAttribute("data-slot"),10);
+      selectedSlotIdx = (selectedSlotIdx===slot) ? null : slot;
+      renderPanelBody();
+    } else if(action === "assignMerc"){
+      playSfxTap();
+      if(selectedSlotIdx!=null){ assignToSlot(selectedSlotIdx, id); selectedSlotIdx=null; }
+    } else if(action === "upgradeWeapon"){
+      upgradeWeapon();
+    } else if(action === "levelUpMerc"){
+      levelUpMerc(id);
+    } else if(action === "summon1"){
+      doSummon(1);
+    } else if(action === "summon10"){
+      doSummon(10);
+    } else if(action === "claimMission"){
+      claimMission(id);
+    } else if(action === "claimLogin"){
+      claimLogin();
+    } else if(action === "codexSub"){
+      playSfxTap();
+      codexSubTab = id;
+      renderPanelBody();
+    }
+  });
+
+  document.getElementById("offlineOk").addEventListener("click", function(){
+    ensureAudio(); playSfxTap();
+    document.getElementById("offlineOverlay").classList.remove("show");
+  });
+  document.getElementById("summonOk").addEventListener("click", function(){
+    ensureAudio(); playSfxTap();
+    document.getElementById("summonOverlay").classList.remove("show");
+  });
+
+  window.addEventListener("beforeunload", saveGame);
+  document.addEventListener("visibilitychange", function(){
+    if(document.visibilityState === "hidden") saveGame();
+  });
+}
+
+/* ===== 튜토리얼 ===== */
+var TUTORIAL_STEPS = [
+  {title:"① 자동전투", text:"용병 파티가 적과 자동으로 전투합니다. 가만히 두어도 성장하니 편하게 지켜보세요."},
+  {title:"② 필살기", text:"게이지가 가득 차면 가운데 필살기 버튼이 빛나요. 직접 탭하면 피해량이 20% 늘어납니다. 안 눌러도 자동으로 터집니다."},
+  {title:"③ 하단 탭바", text:"아래 탭에서 파티 편성·무기·용병 강화·소환·임무·도감을 확인할 수 있어요. 탭 한 번으로 모두 끝나요."}
+];
+var tutStep = 0;
+function showTutorial(){
+  tutStep = 0;
+  renderTutorialStep();
+  document.getElementById("tutorialOverlay").classList.add("show");
+}
+function renderTutorialStep(){
+  var s = TUTORIAL_STEPS[tutStep];
+  document.getElementById("tutTitle").textContent = s.title;
+  document.getElementById("tutText").textContent = s.text;
+  document.getElementById("tutNext").textContent = (tutStep === TUTORIAL_STEPS.length-1) ? "시작하기" : "다음";
+}
+document.getElementById("tutNext").addEventListener("click", function(){
+  ensureAudio(); playSfxTap();
+  tutStep++;
+  if(tutStep >= TUTORIAL_STEPS.length){
+    state.tutorialDone = true;
+    saveGame();
+    document.getElementById("tutorialOverlay").classList.remove("show");
+  } else {
+    renderTutorialStep();
+  }
+});
+
+/* =========================================================
+   10) 초기화
+   ========================================================= */
+function init(){
+  var loaded = loadGame();
+  var def = defaultSave();
+  if(loaded){
+    state = loaded;
+    for(var k in def){ if(state[k] === undefined) state[k] = def[k]; }
+    if(!state.mercs) state.mercs = def.mercs;
+    Object.keys(def.mercs).forEach(function(id){ if(!state.mercs[id]) state.mercs[id] = def.mercs[id]; });
+  } else {
+    state = def;
+  }
+
+  checkDailyReset();
+  applyOfflineReward();
+  regenStamina();
+  healPartyFull();
+
+  document.getElementById("soundBtn").textContent = state.soundOn ? "🔊" : "🔇";
+
+  bindOnce();
+  renderTop();
+  renderBattle();
+  renderUltimate();
+  renderLog();
+
+  saveGame();
+
+  setInterval(gameTick, TICK_MS);
+  setInterval(saveGame, 8000);
+
+  if(!state.tutorialDone){ showTutorial(); }
+}
+
+init();
+
+})();
+</script>
+</body>
+</html>

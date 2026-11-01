@@ -285,6 +285,35 @@ const GAMES = [
       return [p('최고 라운드', best, true), p('처치', fmt(kills)), p('플레이', s.plays || 0)];
     },
   },
+  {
+    id: 'merc', name: '용병단 키우기', genre: '방치형 RPG', bg: '#161020',
+    desc: '섬들을 돌며 용병단을 꾸려 전투를 돌리는 방치형 파티 RPG. 자동으로 싸우는 동안에도 필살기는 직접 눌러 터뜨릴 수 있다.',
+    art: `<svg viewBox="0 0 320 132" preserveAspectRatio="xMidYMid meet">
+      <rect width="320" height="132" fill="#161020"/>
+      <ellipse cx="160" cy="118" rx="96" ry="9" fill="#0d0816"/>
+      <g stroke="#3a2d55" stroke-width="1"><path d="M0 92H320M60 0V132M260 0V132"/></g>
+      <g transform="translate(118,30)">
+        <path d="M0 2 Q-14 10 -14 34 Q-14 58 0 68 Q14 58 14 34 Q14 10 0 2Z" fill="#241a3a" stroke="#5f4ea0" stroke-width="2.5"/>
+        <path d="M-9 44 9 44 M-14 6 14 6" stroke="#5f4ea0" stroke-width="2" fill="none"/>
+      </g>
+      <g stroke-linecap="round">
+        <path d="M70 94 134 40" stroke="#cfd7ea" stroke-width="5"/>
+        <path d="M70 94 60 104" stroke="#8a93ad" stroke-width="7"/>
+        <path d="M128 46 140 34" stroke="#ffd45e" stroke-width="5"/>
+      </g>
+      <g stroke-linecap="round">
+        <path d="M250 94 186 40" stroke="#7fe7ff" stroke-width="5"/>
+        <circle cx="184" cy="34" r="8" fill="#7fe7ff" stroke="#0d0816" stroke-width="2"/>
+      </g>
+      <g fill="#ff6b81"><circle cx="48" cy="26" r="3.2"/><circle cx="276" cy="50" r="3.6"/><circle cx="36" cy="70" r="2.6"/></g>
+      <g fill="#ffd45e"><path d="M160 100 l4 9 9 1 -7 6 2 9 -8 -5 -8 5 2 -9 -7 -6 9 -1Z"/></g>
+    </svg>`,
+    record() {
+      const s = read('gamehub.idlerpg.v1');
+      if (!s) return null;
+      return [p('스테이지', s.maxUnlockedStage || 1, true), p('골드', fmt(s.gold || 0)), p('승리', s.battleWins || 0)];
+    },
+  },
 ];
 
 const $ = id => document.getElementById(id);
