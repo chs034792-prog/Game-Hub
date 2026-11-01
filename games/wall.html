@@ -103,6 +103,40 @@
   .dm-bar { height: 6px; background: #0d0f16; border: 1px solid #2f3946; border-radius: 99px; overflow: hidden; margin: 5px 0; }
   .dm-bar i { display: block; height: 100%; background: linear-gradient(90deg, #4a7, #6fe39a); }
   .dm-foot { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #8592a3; }
+
+  /* ---- 터치(휴대폰) 조작 ----
+     PC(마우스)는 body 에 .touch 클래스가 없으므로 아래 규칙은 적용되지 않는다.
+     isTouch 판정(matchMedia('(pointer: coarse)') 또는 첫 touchstart)에서만 JS가 body.touch 를 붙인다. */
+  canvas#game, #mini { touch-action: none; }
+  #mobileBar { display: none; position: fixed; top: 40px; right: 6px; z-index: 6; flex-direction: column; gap: 6px; }
+  body.touch.playing #mobileBar { display: flex; }
+  #mobileBar button { width: 42px; height: 42px; border-radius: 9px; border: 1px solid #3c4756; background: rgba(27,34,44,.92);
+    color: #e6e9ee; font-size: 15px; cursor: pointer; box-shadow: 0 2px 8px #0007; }
+  #mobileBar button.on { border-color: #ffd166; background: #3a3420; }
+  #rotateOverlay { display: none; position: fixed; inset: 0; z-index: 20; background: #0b0d11; color: #e6e9ee;
+    flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 24px; }
+  #rotateOverlay .ico { font-size: 48px; }
+  #rotateOverlay .t1 { font-size: 18px; font-weight: bold; }
+  #rotateOverlay .t2 { font-size: 13px; color: #9aa6b4; }
+  @media (pointer: coarse) and (orientation: portrait) {
+    body.playing #rotateOverlay { display: flex; }
+  }
+  /* 가로 화면(터치) — 아래 패널을 줄여 맵 영역을 넓히고, 탭·능력 글자가 세로로 안 꺾이게 한다 */
+  @media (pointer: coarse) and (orientation: landscape) {
+    #top { height: 26px; font-size: 10px; gap: 6px; padding: 0 6px; overflow-x: auto; white-space: nowrap; }
+    #relics { top: 28px; }
+    #log { top: 50px; font-size: 11px; }
+    #panel { height: 92px; right: 272px; font-size: 11px; }
+    #info { width: 150px; right: 122px; height: 92px; font-size: 11px; }
+    #mini { width: 122px; height: 92px; }
+    #toast { bottom: 106px; }
+    #dailyBtn { bottom: 98px; }
+    .tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .tab { white-space: nowrap; flex: 0 0 auto; max-width: 60px; overflow: hidden; text-overflow: ellipsis;
+      min-height: 40px; display: flex; align-items: center; justify-content: center; padding: 4px 6px; font-size: 11px; }
+    .abil { flex: 0 0 auto; }
+    .abil .btn, .row .btn { min-height: 40px; display: inline-flex; align-items: center; padding: 6px 9px; font-size: 11px; }
+  }
 </style>
 </head>
 <body>
@@ -138,10 +172,26 @@
     <div id="dailyBody"></div>
   </div>
 </div>
+<div id="mobileBar">
+  <button id="mZoomIn" aria-label="확대">＋</button>
+  <button id="mZoomOut" aria-label="축소">－</button>
+  <button id="mSelect" aria-label="선택 모드">▭</button>
+  <button id="mUpg" aria-label="강화(U)">U</button>
+  <button id="mSpeed" aria-label="배속(F)">F</button>
+  <button id="mPause" aria-label="일시정지(P)">P</button>
+</div>
+<div id="rotateOverlay">
+  <div class="ico">📱↻</div>
+  <div class="t1">가로로 돌려 주세요</div>
+  <div class="t2">이 게임은 가로 화면에서 즐길 수 있도록 만들어졌습니다</div>
+</div>
 <script>
 'use strict';
 // ═════════ 설정 ═════════
-const T = 32, W = 64, H = 48, BOTTOM = 176;
+const T_BASE = 32, W = 64, H = 48, BOTTOM = 176;
+// T 는 "픽셀/타일" 값이다. 터치 핀치·확대 버튼에서만 T_BASE*zoom 으로 바꾼다(기본 zoom=1 → T=32, PC와 동일).
+let T = T_BASE, zoom = 1;
+const ZOOM_MIN = .6, ZOOM_MAX = 1.6;
 const DIFF = {
   easy:      { name: '쉬움',  hp: .7,  dmg: .8,  income: 1.2, eventEvery: 5, nestMul: 1,  essence: .6 },
   normal:    { name: '보통',  hp: 1,   dmg: 1,   income: 1,   eventEvery: 5, nestMul: 1,  essence: 1 },
@@ -2225,7 +2275,8 @@ function tileAtMouse() { return { x: Math.floor((mouse.x + cam.x) / T), y: Math.
 function unitAt(wx, wy) { let best = null, bd = 99; for (const u of S.units) { const d = Math.hypot(u.x - wx, u.y - wy); if (d < UNITS[u.kind].r + .25 && d < bd) { bd = d; best = u; } } return best; }
 cv.addEventListener('contextmenu', e => e.preventDefault());
 mini.addEventListener('contextmenu', e => e.preventDefault());
-cv.addEventListener('mousedown', e => {
+// PC 마우스 로직 그대로. 이름 붙인 함수로 빼서 터치 핸들러도 "똑같은 동작"을 그대로 재사용한다(동작 분기가 아니라 호출만 공유).
+function canvasDown(e) {
   if (!S || S.over || S.pick) return;
   mouse.x = e.clientX; mouse.y = e.clientY;
   const t = tileAtMouse(), wx = (mouse.x + cam.x) / T, wy = (mouse.y + cam.y) / T;
@@ -2244,8 +2295,8 @@ cv.addEventListener('mousedown', e => {
   if (S.sel) { mouse.down = true; mouse.last = idx(t.x, t.y); place(t.x, t.y); return; }
   if (S.sellMode) { sellAt(t.x, t.y); return; }
   mouse.down = true; mouse.sx = e.clientX; mouse.sy = e.clientY; mouse.drag = false;
-});
-addEventListener('mouseup', e => {
+}
+function canvasUp(e) {
   if (!S) { mouse.down = false; return; }
   if (mouse.down && !S.sel && e.button === 0) {
     if (mouse.drag) {
@@ -2260,19 +2311,116 @@ addEventListener('mouseup', e => {
     renderInfo();
   }
   mouse.down = false; mouse.drag = false;
-});
-cv.addEventListener('mousemove', e => {
+}
+function canvasMove(e) {
   mouse.x = e.clientX; mouse.y = e.clientY;
   if (!mouse.down || !S) return;
   if (S.sel) { const t = tileAtMouse(), i = idx(t.x, t.y); if (i !== mouse.last && inb(t.x, t.y)) { mouse.last = i; place(t.x, t.y); } return; }
   if (Math.hypot(mouse.x - mouse.sx, mouse.y - mouse.sy) > 6) mouse.drag = true;
-});
-mini.addEventListener('mousedown', e => {
+}
+function miniDown(e) {
   if (!S || S.over) return;
   const r = mini.getBoundingClientRect(), wx = (e.clientX - r.left) / mini.width * W, wy = (e.clientY - r.top) / mini.height * H;
   if (e.button === 2) { if (S.selU.length) for (const u of S.selU) u.hold = { x: wx + rnd(-1, 1), y: wy + rnd(-1, 1) }; else orderMove(Math.floor(wx), Math.floor(wy)); return; }
   cam.lock = false; cam.x = wx * T - cv.width / 2; cam.y = wy * T - (cv.height - BOTTOM) / 2;
-});
+}
+cv.addEventListener('mousedown', canvasDown);
+addEventListener('mouseup', canvasUp);
+cv.addEventListener('mousemove', canvasMove);
+mini.addEventListener('mousedown', miniDown);
+
+// ═════════ 터치(휴대폰) 조작 — 아래부터는 터치 이벤트에서만 호출된다. PC 마우스 흐름은 위 그대로다. ═════════
+let isTouch = false;
+try { isTouch = matchMedia('(pointer: coarse)').matches; } catch (e) {}
+if (isTouch) document.body.classList.add('touch');
+addEventListener('touchstart', function onFirstTouch() {
+  if (!isTouch) { isTouch = true; document.body.classList.add('touch'); }
+}, { once: true, passive: true });
+
+let touchSelectMode = false; // 화면 버튼으로 켜면: 한 손가락 드래그 = 유닛 박스 선택(끄면 지도 이동)
+const touchSt = { mode: null, sx: 0, sy: 0, moved: false, longFired: false, timer: null, camX0: 0, camY0: 0, pinchDist: 0, pinchZoom: 1 };
+function fakeEvt(x, y, button) { return { clientX: x, clientY: y, button: button || 0, shiftKey: false, preventDefault() {} }; }
+function touchDistOf(ts) { return Math.hypot(ts[0].clientX - ts[1].clientX, ts[0].clientY - ts[1].clientY); }
+function touchMidOf(ts) { return { x: (ts[0].clientX + ts[1].clientX) / 2, y: (ts[0].clientY + ts[1].clientY) / 2 }; }
+function clearLongTimer() { if (touchSt.timer) { clearTimeout(touchSt.timer); touchSt.timer = null; } }
+// 핀치(두 손가락) 확대·축소. anchor(화면 좌표) 아래의 월드 좌표가 그대로 유지되도록 cam 을 같이 옮긴다.
+function setZoom(z, ax, ay) {
+  z = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+  if (!cv || z === zoom) return;
+  if (ax === undefined) { ax = cv.width / 2; ay = cv.height / 2; }
+  const wx = (cam.x + ax) / T, wy = (cam.y + ay) / T;
+  T = T_BASE * z; zoom = z;
+  cam.x = wx * T - ax; cam.y = wy * T - ay;
+}
+function syncMobileBar() {
+  if (!S) return;
+  const fb = document.getElementById('mSpeed'), pb = document.getElementById('mPause');
+  if (fb) fb.classList.toggle('on', S.speed === 2);
+  if (pb) pb.classList.toggle('on', S.paused);
+}
+cv.addEventListener('touchstart', e => {
+  if (!S || S.over || S.pick) return;
+  if (e.touches.length >= 2) {
+    e.preventDefault(); clearLongTimer();
+    touchSt.mode = 'pinch'; touchSt.pinchDist = touchDistOf(e.touches); touchSt.pinchZoom = zoom;
+    return;
+  }
+  const t = e.touches[0];
+  mouse.x = t.clientX; mouse.y = t.clientY;
+  touchSt.sx = t.clientX; touchSt.sy = t.clientY; touchSt.moved = false; touchSt.longFired = false;
+  touchSt.camX0 = cam.x; touchSt.camY0 = cam.y;
+  const direct = !!(S.targeting || S.sel || S.sellMode);
+  e.preventDefault();
+  if (direct) {
+    touchSt.mode = 'direct'; canvasDown(fakeEvt(t.clientX, t.clientY, 0));
+  } else if (touchSelectMode) {
+    touchSt.mode = 'select'; canvasDown(fakeEvt(t.clientX, t.clientY, 0));
+    touchSt.timer = setTimeout(() => { if (!touchSt.moved) { touchSt.longFired = true; canvasDown(fakeEvt(touchSt.sx, touchSt.sy, 2)); } }, 450);
+  } else {
+    touchSt.mode = 'pan';
+    touchSt.timer = setTimeout(() => { if (!touchSt.moved) { touchSt.longFired = true; canvasDown(fakeEvt(touchSt.sx, touchSt.sy, 2)); } }, 450);
+  }
+}, { passive: false });
+cv.addEventListener('touchmove', e => {
+  if (!S) return;
+  if (touchSt.mode === 'pinch') {
+    if (e.touches.length < 2) return;
+    e.preventDefault();
+    const d = touchDistOf(e.touches);
+    if (touchSt.pinchDist > 0) { const mid = touchMidOf(e.touches); setZoom(touchSt.pinchZoom * (d / touchSt.pinchDist), mid.x, mid.y); }
+    return;
+  }
+  if (e.touches.length >= 2) return;
+  const t = e.touches[0];
+  if (!touchSt.moved && Math.hypot(t.clientX - touchSt.sx, t.clientY - touchSt.sy) > 8) { touchSt.moved = true; clearLongTimer(); }
+  if (touchSt.mode === 'direct' || touchSt.mode === 'select') {
+    e.preventDefault(); mouse.x = t.clientX; mouse.y = t.clientY; canvasMove(fakeEvt(t.clientX, t.clientY, 0));
+  } else if (touchSt.mode === 'pan') {
+    e.preventDefault(); cam.lock = false;
+    cam.x = touchSt.camX0 - (t.clientX - touchSt.sx); cam.y = touchSt.camY0 - (t.clientY - touchSt.sy);
+    mouse.x = t.clientX; mouse.y = t.clientY;
+  }
+}, { passive: false });
+cv.addEventListener('touchend', e => {
+  if (!S) return;
+  clearLongTimer();
+  if (touchSt.mode === 'direct') { canvasUp(fakeEvt(mouse.x, mouse.y, 0)); }
+  else if (touchSt.mode === 'select') { if (!touchSt.longFired) canvasUp(fakeEvt(mouse.x, mouse.y, 0)); else { mouse.down = false; mouse.drag = false; } }
+  else if (touchSt.mode === 'pan' && !touchSt.moved && !touchSt.longFired) { canvasDown(fakeEvt(touchSt.sx, touchSt.sy, 0)); canvasUp(fakeEvt(touchSt.sx, touchSt.sy, 0)); }
+  touchSt.mode = null;
+}, { passive: true });
+cv.addEventListener('touchcancel', () => { clearLongTimer(); touchSt.mode = null; mouse.down = false; mouse.drag = false; }, { passive: true });
+mini.addEventListener('touchstart', e => {
+  if (!S || S.over || !e.touches.length) return;
+  e.preventDefault(); miniDown(fakeEvt(e.touches[0].clientX, e.touches[0].clientY, 0));
+}, { passive: false });
+document.getElementById('mZoomIn').addEventListener('click', () => setZoom(zoom * 1.2));
+document.getElementById('mZoomOut').addEventListener('click', () => setZoom(zoom / 1.2));
+document.getElementById('mSelect').addEventListener('click', e => { touchSelectMode = !touchSelectMode; e.currentTarget.classList.toggle('on', touchSelectMode); });
+document.getElementById('mUpg').addEventListener('click', () => { if (S && S.selB) { upgradeBld(S.selB); renderInfo(); } });
+document.getElementById('mSpeed').addEventListener('click', () => { if (!S) return; S.speed = S.speed === 1 ? 2 : 1; banner(S.speed === 2 ? '2배속' : '보통 속도'); syncMobileBar(); });
+document.getElementById('mPause').addEventListener('click', () => { if (!S) return; S.paused = !S.paused; banner(S.paused ? '일시정지' : '계속'); syncMobileBar(); });
+
 addEventListener('keydown', e => {
   if (document.getElementById('dailyModal').classList.contains('open')) { if (e.key === 'Escape') closeDaily(); return; }
   if (!S || S.over) return;
@@ -2288,8 +2436,8 @@ addEventListener('keydown', e => {
   if (k === 'u' && S.selB) upgradeBld(S.selB);
   if (k === 'g') { S.rally = { x: (mouse.x + cam.x) / T, y: (mouse.y + cam.y) / T }; for (const u of S.selU) u.hold = null; log('집결지를 옮겼습니다', '#6fe39a'); }
   if (k === ' ') { cam.lock = true; e.preventDefault(); }
-  if (k === 'f') { S.speed = S.speed === 1 ? 2 : 1; banner(S.speed === 2 ? '2배속' : '보통 속도'); }
-  if (k === 'p') { S.paused = !S.paused; banner(S.paused ? '일시정지' : '계속'); }
+  if (k === 'f') { S.speed = S.speed === 1 ? 2 : 1; banner(S.speed === 2 ? '2배속' : '보통 속도'); syncMobileBar(); }
+  if (k === 'p') { S.paused = !S.paused; banner(S.paused ? '일시정지' : '계속'); syncMobileBar(); }
   if (k === 'escape') { S.sel = null; S.sellMode = false; S.targeting = null; S.selU = []; S.selB = null; buildUI(); renderInfo(); }
   if (e.key.startsWith('Arrow')) e.preventDefault();
 });
@@ -2392,7 +2540,7 @@ document.getElementById('startBox').addEventListener('click', e => {
   else if (a === 'perks' || a === 'ach') menu.view = a;
   else if (a === 'back') menu.view = 'main';
   else if (a === 'perk') { const m = loadMeta(), lv = m.perks[k] || 0, cost = PERKS[k].cost * (lv + 1); if (lv < PERKS[k].max && m.essence >= cost) { m.essence -= cost; m.perks[k] = lv + 1; saveMeta(m); } }
-  else if (a === 'goEndless') { document.getElementById('overlay').style.display = 'none'; S.over = false; S.endless = true; S.won = false; S.waveT = 5; banner('무한 모드', '100웨이브 이후에도 적이 계속 강해집니다'); return; }
+  else if (a === 'goEndless') { document.getElementById('overlay').style.display = 'none'; document.body.classList.add('playing'); S.over = false; S.endless = true; S.won = false; S.waveT = 5; banner('무한 모드', '100웨이브 이후에도 적이 계속 강해집니다'); return; }
   renderMenu();
 });
 document.getElementById('dailyBtn').addEventListener('click', openDaily);
@@ -2422,6 +2570,7 @@ function gameOver(win) {
     + `<div style="margin:6px 0">💠 사이오닉 정수 <b style="color:#c9a0ff">+${gain}</b>${ach ? ` · 🏆 이번 판 업적: ${ach}` : ''}</div>`
     + (win && !S.endless ? `<button class="alt" data-act="goEndless">무한 모드로 계속하기</button>` : '') + '<hr style="border-color:#2a3340">';
   document.getElementById('overlay').style.display = 'flex';
+  document.body.classList.remove('playing'); // 세로 안내 오버레이는 플레이 화면에만 — 메뉴로 돌아오면 끈다
   renderMenu();
   menu.top = '';
 }
@@ -2443,6 +2592,7 @@ function loop(now) {
 }
 function start(resume, diff, mapId, endless, cmd, muts) {
   document.getElementById('overlay').style.display = 'none';
+  document.body.classList.add('playing'); // 세로 안내 오버레이는 이 클래스가 있을 때만(플레이 화면) 뜬다
   const d = resume ? loadSave() : null;
   if (!resume) clearSave();
   if (d) applySave(d); else newGame(diff || 'normal', mapId || 'canyon', !!endless, cmd || null, muts || []);
