@@ -609,6 +609,7 @@ function gameTick(){
   }
 
   var totalDamage = 0;
+  var tickHasCrit = false;
   members.forEach(function(m){
     if(m.role === "healer"){
       healLowestAlly(m);
@@ -616,6 +617,7 @@ function gameTick(){
       var dmg = m.atk;
       if(m.role === "rogue" && Math.random() < 0.15){
         dmg *= 1.5;
+        tickHasCrit = true;
         playSfxCrit();
       }
       totalDamage += dmg;
@@ -625,7 +627,7 @@ function gameTick(){
   if(totalDamage > 0){
     battle.enemy.hp -= totalDamage;
     playSfxHit();
-    appendLog("파티가 " + battle.enemy.name + "에게 " + Math.round(totalDamage) + " 피해!");
+    appendLog("파티가 " + battle.enemy.name + "에게 " + Math.round(totalDamage) + " 피해!" + (tickHasCrit ? " (치명타!)" : ""));
   }
 
   updateGauge(GAUGE_PER_TICK);
