@@ -285,28 +285,6 @@ const GAMES = [
       return [p('최고 라운드', best, true), p('처치', fmt(kills)), p('플레이', s.plays || 0)];
     },
   },
-  {
-    id: 'wall', name: '극한 벽짓고 살아남기', genre: '생존 디펜스', bg: '#15121c',
-    desc: '스타2 유즈맵을 옮긴 생존전. 벽으로 길을 막고 사령관 능력과 변이원을 조합해 100웨이브를 버틴다.',
-    art: `<svg viewBox="0 0 320 132" preserveAspectRatio="xMidYMid meet">
-      <rect width="320" height="132" fill="#15121c"/>
-      <g fill="#6b6478" stroke="#2a2535" stroke-width="2">
-        <rect x="104" y="18" width="36" height="20"/><rect x="140" y="18" width="36" height="20"/><rect x="176" y="18" width="36" height="20"/>
-        <rect x="86" y="38" width="36" height="20"/><rect x="122" y="38" width="36" height="20"/><rect x="158" y="38" width="36" height="20"/><rect x="194" y="38" width="36" height="20"/>
-        <rect x="104" y="58" width="36" height="20"/><rect x="140" y="58" width="36" height="20"/><rect x="176" y="58" width="36" height="20"/>
-      </g>
-      <path d="M160 92 180 110 160 128 140 110Z" fill="#7fe7ff" stroke="#d6f6ff" stroke-width="2"/>
-      <g fill="#8ef77a"><circle cx="48" cy="28" r="7"/><circle cx="272" cy="26" r="7"/><circle cx="36" cy="66" r="6"/><circle cx="286" cy="62" r="6"/></g>
-      <g stroke="#ff6b81" stroke-width="2.5" stroke-linecap="round"><path d="M62 34 86 42"/><path d="M258 32 234 42"/></g>
-    </svg>`,
-    record() {
-      const meta = read('wallDefenseMeta'), rec = read('wallDefenseRecords2');
-      const best = rec ? Math.max(0, ...Object.values(rec).map(o => Math.max(+o.best || 0, +o.endless || 0))) : 0;
-      const wins = rec ? Object.values(rec).reduce((a, o) => a + (+o.wins || 0), 0) : 0;
-      if (!meta && !best) return null;
-      return [p('최고 웨이브', best, true), p('승리', wins), p('정수', fmt((meta && meta.essence) || 0))];
-    },
-  },
 ];
 
 const $ = id => document.getElementById(id);
@@ -339,13 +317,9 @@ $('grid').innerHTML = GAMES.map(g => {
 const played = GAMES.filter(g => { try { return !!g.record(); } catch (e) { return false; } }).length;
 const slime = read('slime-idle-v1') || {};
 const nx = read('nexusdefense.save') || {}, md = read('moneydefense.v4') || {};
-const wallRec = read('wallDefenseRecords2') || {}, wallMeta = read('wallDefenseMeta') || {};
-const runs = (+nx.runs || 0) + (+md.plays || 0) + (+((wallMeta.stats || {}).runs) || 0);
-const bestWave = Math.max(+nx.best || 0, 0, ...Object.values(wallRec).map(o => +o.best || 0));
+const runs = (+nx.runs || 0) + (+md.plays || 0);
+const bestWave = Math.max(+nx.best || 0, 0);
 const moneyBest = Math.max(0, ...Object.values(md.best || {}).map(Number).filter(n => !isNaN(n)));
-const wallBest = Object.values(wallRec).length
-  ? Math.max(0, ...Object.values(wallRec).map(o => Math.max(+o.best || 0, +o.endless || 0)))
-  : 0;
 $('total').innerHTML =
   `<span>플레이한 게임<b>${played} / ${GAMES.length}</b></span>` +
   `<span>총 출격 횟수<b>${fmt(runs)}</b></span>` +
@@ -392,23 +366,20 @@ const dailyBlocks = [
   { date: slime.daily && slime.daily.date, daily: slime.daily, wallStyle: false },
   { date: nx.daily && nx.daily.date, daily: nx.daily, wallStyle: false },
   { date: md.daily && md.daily.date, daily: md.daily, wallStyle: false },
-  { date: wallMeta.daily && wallMeta.daily.day, daily: wallMeta.daily, wallStyle: true },
 ];
 const maxStreak = Math.max(
   +((slime.daily || {}).streak) || 0,
   +((nx.daily || {}).streak) || 0,
   +((md.daily || {}).streak) || 0,
-  +((wallMeta.daily || {}).streak) || 0,
 );
 const todayAllMissionsDone = dailyBlocks.some(b => b.date === today && missionsAllClaimed(b.daily, b.wallStyle));
 
 const BADGES = [
-  { icon: '🧭', name: '올라운더', cond: played === 4, title: '4개 게임 모두 기록 보유' },
+  { icon: '🧭', name: '올라운더', cond: played === GAMES.length, title: '허브의 모든 게임 기록 보유' },
   { icon: '🗺️', name: '탐험가', cond: played >= 2, title: '2개 이상 게임에서 기록 보유' },
   { icon: '🟢', name: '슬라임 10레벨', cond: (+slime.level || 0) >= 10, title: '슬라임 키우기 레벨 10 이상' },
   { icon: '🔷', name: '넥서스 웨이브 100', cond: (+nx.best || 0) >= 100, title: '넥서스 디펜스 최고 웨이브 100 이상' },
   { icon: '💰', name: '머니 라운드 50', cond: moneyBest >= 50, title: '머니 디펜스 최고 라운드 50 이상' },
-  { icon: '🧱', name: '벽짓살 웨이브 50', cond: wallBest >= 50, title: '극한 벽짓고 살아남기 최고 웨이브 50 이상' },
   { icon: '🔥', name: '연속 접속 3일', cond: maxStreak >= 3, title: '어느 한 게임이라도 일일 접속 연속 3일 이상' },
   { icon: '🔥', name: '연속 접속 7일', cond: maxStreak >= 7, title: '어느 한 게임이라도 일일 접속 연속 7일 이상' },
   { icon: '📅', name: '오늘의 임무 올클리어', cond: todayAllMissionsDone, title: '오늘 날짜의 일일 임무를 한 게임에서 모두 완료' },

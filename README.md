@@ -1,6 +1,6 @@
 # 🎮 Game Hub
 
-직접 만든 브라우저 게임 네 개를 한곳에서 고르고 바로 플레이하는 허브입니다. `index.html`을 열면 카드 네 장이 뜨고, 누르면 허브 안에서 그 게임이 실행됩니다.
+직접 만든 브라우저 게임 세 개를 한곳에서 고르고 바로 플레이하는 허브입니다. `index.html`을 열면 카드 세 장이 뜨고, 누르면 허브 안에서 그 게임이 실행됩니다.
 
 **바로 플레이**: https://chs034792-prog.github.io/Game-Hub/ (휴대폰에서는 아래 '휴대폰 앱으로 설치'처럼 홈 화면에 추가하면 앱처럼 쓸 수 있습니다)
 
@@ -11,7 +11,8 @@
 | 슬라임 키우기 | 방치형 | [SlimeGame](https://github.com/chs034792-prog/SlimeGame) |
 | 넥서스 디펜스 | 타워 디펜스 | [Nexus-Defense](https://github.com/chs034792-prog/Nexus-Defense) |
 | 머니 디펜스 | 경로형 TD | [Money-Defense](https://github.com/chs034792-prog/Money-Defense) |
-| 극한 벽짓고 살아남기 | 생존 디펜스 | [Wall-Defense](https://github.com/chs034792-prog/Wall-Defense) |
+
+> **극한 벽짓고 살아남기는 2026-11-02 허브에서 내렸습니다** (CEO 결정 — 휴대폰 조작이 맞지 않음). 원본 저장소 [Wall-Defense](https://github.com/chs034792-prog/Wall-Defense)와 플레이어 저장 기록(`wallDefenseMeta`·`wallDefenseRecords2`)은 그대로 둡니다. 되살리려면 `tools/sync.js`·`index.html`·`play.html`의 `GAMES`, `sw.js`의 `CORE`, `manifest.webmanifest` 바로가기에 다시 넣고 `games/wall.html`을 git 기록에서 되살립니다.
 
 ## 구조
 
@@ -78,7 +79,7 @@ git clone https://github.com/chs034792-prog/Wall-Defense.git Wall-Defense
 ## 안내 배너 · 허브 공통 뱃지
 
 - **처음 온 사람 안내 배너**: 4개 게임 기록이 모두 없을 때(완전 신규 유저)만 카드 그리드 위에 "슬라임 키우기부터 시작해 보세요" 배너가 뜹니다. ✕로 닫으면 다시 뜨지 않습니다 — 허브 전용 저장 키 `gamehub.ui.v1`(`{bannerDismissed:true}`)에 기록합니다. 게임 저장 키는 여전히 읽기만 합니다.
-- **허브 공통 뱃지**: 통합 기록(`.total`) 위에 뱃지 10개(올라운더·탐험가·슬라임 10레벨·넥서스 웨이브 100·머니 라운드 50·벽짓살 웨이브 50·연속 접속 3일/7일·오늘의 임무 올클리어·퇴직금 보유)가 뜹니다. 조건을 만족하면 금색으로 켜지고, 마우스를 올리면 조건이 툴팁으로 보입니다. 모두 게임 저장 키를 읽어서만 판단하며 쓰지 않습니다.
+- **허브 공통 뱃지**: 통합 기록(`.total`) 위에 뱃지 9개(올라운더·탐험가·슬라임 10레벨·넥서스 웨이브 100·머니 라운드 50·연속 접속 3일/7일·오늘의 임무 올클리어·퇴직금 보유)가 뜹니다. 조건을 만족하면 금색으로 켜지고, 마우스를 올리면 조건이 툴팁으로 보입니다. 모두 게임 저장 키를 읽어서만 판단하며 쓰지 않습니다.
 
 ## 실행
 
@@ -94,7 +95,7 @@ python -m http.server
 
 1. 휴대폰 Chrome(또는 삼성 인터넷)으로 https://chs034792-prog.github.io/Game-Hub/ 를 엽니다.
 2. 메뉴(⋮) → **홈 화면에 추가** (또는 **앱 설치**) 를 누릅니다.
-3. 홈 화면의 **Game Hub** 아이콘으로 실행하면 주소창 없이 전체 화면으로 뜹니다. 아이콘을 길게 누르면 게임 4개 바로가기가 나옵니다.
+3. 홈 화면의 **Game Hub** 아이콘으로 실행하면 주소창 없이 전체 화면으로 뜹니다. 아이콘을 길게 누르면 게임 바로가기가 나옵니다.
 
 **업데이트는 자동입니다.** 앱을 다시 설치할 필요가 없습니다.
 

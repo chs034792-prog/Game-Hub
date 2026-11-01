@@ -14,7 +14,6 @@ const GAMES = [
   { id: 'slime', dir: 'SlimeGame',     name: '슬라임 키우기' },
   { id: 'nexus', dir: 'Nexus-Defense', name: '넥서스 디펜스' },
   { id: 'money', dir: 'Money-Defense', name: '머니 디펜스' },
-  { id: 'wall',  dir: 'Wall-Defense',  name: '극한 벽짓고 살아남기' },
 ];
 
 const check = process.argv.includes('--check');

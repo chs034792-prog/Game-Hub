@@ -1,7 +1,7 @@
 {
   "name": "Game Hub",
   "short_name": "Game Hub",
-  "description": "HS엔지니어링 GameHub — 슬라임 키우기 · 넥서스 디펜스 · 머니 디펜스 · 극한 벽짓고 살아남기",
+  "description": "HS엔지니어링 GameHub — 슬라임 키우기 · 넥서스 디펜스 · 머니 디펜스",
   "id": "./",
   "start_url": "./index.html",
   "scope": "./",
@@ -18,7 +18,6 @@
   "shortcuts": [
     { "name": "슬라임 키우기", "url": "./play.html?game=slime", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "넥서스 디펜스", "url": "./play.html?game=nexus", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "머니 디펜스", "url": "./play.html?game=money", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "극한 벽짓고 살아남기", "url": "./play.html?game=wall", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+    { "name": "머니 디펜스", "url": "./play.html?game=money", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }
